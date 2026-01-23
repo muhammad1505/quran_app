@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:quran_app/core/settings/audio_settings.dart';
+import 'package:quran_app/core/settings/prayer_settings.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -12,22 +14,28 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  String _selectedQari = 'alafasy'; // Default ID for Mishary Rashid Alafasy
   bool _enableNotifications = true;
-  double _volume = 1.0;
   final QuranSettingsController _quranSettings =
       QuranSettingsController.instance;
+  final AudioSettingsController _audioSettings =
+      AudioSettingsController.instance;
+  final PrayerSettingsController _prayerSettings =
+      PrayerSettingsController.instance;
 
   @override
   void initState() {
     super.initState();
     _quranSettings.addListener(_onSettingsChanged);
+    _audioSettings.addListener(_onSettingsChanged);
+    _prayerSettings.addListener(_onSettingsChanged);
     _loadSettings();
   }
 
   @override
   void dispose() {
     _quranSettings.removeListener(_onSettingsChanged);
+    _audioSettings.removeListener(_onSettingsChanged);
+    _prayerSettings.removeListener(_onSettingsChanged);
     super.dispose();
   }
 
@@ -39,11 +47,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadSettings() async {
     await _quranSettings.load();
+    await _audioSettings.load();
+    await _prayerSettings.load();
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _selectedQari = prefs.getString('qari') ?? 'alafasy';
       _enableNotifications = prefs.getBool('notifications') ?? true;
-      _volume = prefs.getDouble('volume') ?? 1.0;
     });
   }
 
@@ -76,7 +84,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _buildSectionHeader("Al-Quran & Audio"),
           ListTile(
             title: const Text("Terjemahan"),
-            subtitle: Text(_translationLabel(_quranSettings.value.translation)),
+            subtitle: Text(_quranSettings.value.translation.label),
             leading: const Icon(Icons.translate),
             onTap: () {
               _showTranslationDialog();
@@ -114,7 +122,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           ListTile(
             title: const Text("Qari (Pembaca)"),
-            subtitle: Text(_getQariName(_selectedQari)),
+            subtitle: Text(_getQariName(_audioSettings.value.qariId)),
             leading: const Icon(Icons.mic),
             onTap: () {
               _showQariDialog();
@@ -128,19 +136,33 @@ class _SettingsPageState extends State<SettingsPage> {
                 const Icon(Icons.volume_down, color: Colors.grey),
                 Expanded(
                   child: Slider(
-                    value: _volume,
+                    value: _audioSettings.value.volume,
                     activeColor: Theme.of(context).primaryColor,
                     onChanged: (val) {
-                      setState(() => _volume = val);
+                      _audioSettings.updateVolume(val);
                     },
                     onChangeEnd: (val) {
-                      _saveSetting('volume', val);
+                      _audioSettings.updateVolume(val);
                     },
                   ),
                 ),
                 const Icon(Icons.volume_up, color: Colors.grey),
               ],
             ),
+          ),
+          const Divider(),
+          _buildSectionHeader("Jadwal Sholat"),
+          ListTile(
+            title: const Text("Metode Perhitungan"),
+            subtitle: Text(prayerMethodLabel(_prayerSettings.value.method)),
+            leading: const Icon(Icons.calculate),
+            onTap: () => _showPrayerMethodDialog(),
+          ),
+          ListTile(
+            title: const Text("Madhab"),
+            subtitle: Text(prayerMadhabLabel(_prayerSettings.value.madhab)),
+            leading: const Icon(Icons.menu_book),
+            onTap: () => _showMadhabDialog(),
           ),
           const Divider(),
           _buildSectionHeader("Tentang"),
@@ -172,21 +194,12 @@ class _SettingsPageState extends State<SettingsPage> {
     switch (id) {
       case 'alafasy':
         return "Mishary Rashid Alafasy";
-      case 'sudais':
-        return "Abdurrahmaan As-Sudais";
-      case 'ghamadi':
-        return "Saad Al-Ghamdi";
+      case 'abdulbasit':
+        return "Abdul Basit (Murattal)";
+      case 'basfar':
+        return "Abdullah Basfar";
       default:
         return "Mishary Rashid Alafasy";
-    }
-  }
-
-  String _translationLabel(TranslationLanguage language) {
-    switch (language) {
-      case TranslationLanguage.id:
-        return "Bahasa Indonesia";
-      case TranslationLanguage.en:
-        return "English (Abdel Haleem)";
     }
   }
 
@@ -199,42 +212,56 @@ class _SettingsPageState extends State<SettingsPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              title: const Text("Bahasa Indonesia"),
+              title: Text(TranslationSource.idKemenag.label),
               leading: Radio<String>(
-                value: 'id',
+                value: TranslationSource.idKemenag.name,
                 // ignore: deprecated_member_use
                 groupValue:
-                    _quranSettings.value.translation == TranslationLanguage.id
-                        ? 'id'
-                        : 'en',
+                    _quranSettings.value.translation.name,
                 // ignore: deprecated_member_use
                 onChanged: (val) {
-                  _quranSettings.updateTranslation(TranslationLanguage.id);
+                  _quranSettings.updateTranslation(TranslationSource.idKemenag);
                   Navigator.pop(ctx);
                 },
               ),
               onTap: () {
-                _quranSettings.updateTranslation(TranslationLanguage.id);
+                _quranSettings.updateTranslation(TranslationSource.idKemenag);
                 Navigator.pop(ctx);
               },
             ),
             ListTile(
-              title: const Text("English (Abdel Haleem)"),
+              title: Text(TranslationSource.enAbdelHaleem.label),
               leading: Radio<String>(
-                value: 'en',
+                value: TranslationSource.enAbdelHaleem.name,
                 // ignore: deprecated_member_use
-                groupValue:
-                    _quranSettings.value.translation == TranslationLanguage.id
-                        ? 'id'
-                        : 'en',
+                groupValue: _quranSettings.value.translation.name,
                 // ignore: deprecated_member_use
                 onChanged: (val) {
-                  _quranSettings.updateTranslation(TranslationLanguage.en);
+                  _quranSettings.updateTranslation(
+                      TranslationSource.enAbdelHaleem);
                   Navigator.pop(ctx);
                 },
               ),
               onTap: () {
-                _quranSettings.updateTranslation(TranslationLanguage.en);
+                _quranSettings.updateTranslation(
+                    TranslationSource.enAbdelHaleem);
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              title: Text(TranslationSource.enSaheeh.label),
+              leading: Radio<String>(
+                value: TranslationSource.enSaheeh.name,
+                // ignore: deprecated_member_use
+                groupValue: _quranSettings.value.translation.name,
+                // ignore: deprecated_member_use
+                onChanged: (val) {
+                  _quranSettings.updateTranslation(TranslationSource.enSaheeh);
+                  Navigator.pop(ctx);
+                },
+              ),
+              onTap: () {
+                _quranSettings.updateTranslation(TranslationSource.enSaheeh);
                 Navigator.pop(ctx);
               },
             ),
@@ -253,8 +280,8 @@ class _SettingsPageState extends State<SettingsPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildQariItem('alafasy', "Mishary Rashid Alafasy"),
-            _buildQariItem('sudais', "Abdurrahmaan As-Sudais"),
-            _buildQariItem('ghamadi', "Saad Al-Ghamdi"),
+            _buildQariItem('abdulbasit', "Abdul Basit (Murattal)"),
+            _buildQariItem('basfar', "Abdullah Basfar"),
           ],
         ),
       ),
@@ -267,19 +294,79 @@ class _SettingsPageState extends State<SettingsPage> {
       leading: Radio<String>(
         value: id,
         // ignore: deprecated_member_use
-        groupValue: _selectedQari,
+        groupValue: _audioSettings.value.qariId,
         // ignore: deprecated_member_use
         onChanged: (val) {
-          setState(() => _selectedQari = val.toString());
-          _saveSetting('qari', val);
+          _audioSettings.updateQari(val.toString());
           Navigator.pop(context);
         },
       ),
       onTap: () {
-        setState(() => _selectedQari = id);
-        _saveSetting('qari', id);
+        _audioSettings.updateQari(id);
         Navigator.pop(context);
       },
+    );
+  }
+
+  void _showPrayerMethodDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Metode Perhitungan"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: PrayerCalculationMethod.values.map((method) {
+            return ListTile(
+              title: Text(prayerMethodLabel(method)),
+              leading: Radio<String>(
+                value: method.name,
+                // ignore: deprecated_member_use
+                groupValue: _prayerSettings.value.method.name,
+                // ignore: deprecated_member_use
+                onChanged: (val) {
+                  _prayerSettings.updateMethod(method);
+                  Navigator.pop(ctx);
+                },
+              ),
+              onTap: () {
+                _prayerSettings.updateMethod(method);
+                Navigator.pop(ctx);
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showMadhabDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Pilih Madhab"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: PrayerMadhab.values.map((madhab) {
+            return ListTile(
+              title: Text(prayerMadhabLabel(madhab)),
+              leading: Radio<String>(
+                value: madhab.name,
+                // ignore: deprecated_member_use
+                groupValue: _prayerSettings.value.madhab.name,
+                // ignore: deprecated_member_use
+                onChanged: (val) {
+                  _prayerSettings.updateMadhab(madhab);
+                  Navigator.pop(ctx);
+                },
+              ),
+              onTap: () {
+                _prayerSettings.updateMadhab(madhab);
+                Navigator.pop(ctx);
+              },
+            );
+          }).toList(),
+        ),
+      ),
     );
   }
 }

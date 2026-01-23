@@ -3,21 +3,46 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 enum TranslationLanguage { id, en }
 
+enum TranslationSource { idKemenag, enAbdelHaleem, enSaheeh }
+
+extension TranslationSourceExtension on TranslationSource {
+  TranslationLanguage get language {
+    switch (this) {
+      case TranslationSource.idKemenag:
+        return TranslationLanguage.id;
+      case TranslationSource.enAbdelHaleem:
+      case TranslationSource.enSaheeh:
+        return TranslationLanguage.en;
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case TranslationSource.idKemenag:
+        return 'Bahasa Indonesia (Kemenag RI)';
+      case TranslationSource.enAbdelHaleem:
+        return 'English (Abdel Haleem)';
+      case TranslationSource.enSaheeh:
+        return 'English (Saheeh International)';
+    }
+  }
+}
+
 class QuranSettings {
-  final TranslationLanguage translation;
+  final TranslationSource translation;
   final bool showLatin;
   final bool showTajwid;
   final bool showWordByWord;
 
   const QuranSettings({
-    this.translation = TranslationLanguage.id,
+    this.translation = TranslationSource.idKemenag,
     this.showLatin = false,
     this.showTajwid = false,
     this.showWordByWord = false,
   });
 
   QuranSettings copyWith({
-    TranslationLanguage? translation,
+    TranslationSource? translation,
     bool? showLatin,
     bool? showTajwid,
     bool? showWordByWord,
@@ -46,7 +71,7 @@ class QuranSettingsController extends ChangeNotifier {
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final translationCode = prefs.getString(_translationKey) ?? 'id';
+    final translationCode = prefs.getString(_translationKey);
     _value = _value.copyWith(
       translation: _parseTranslation(translationCode),
       showLatin: prefs.getBool(_showLatinKey) ?? false,
@@ -56,11 +81,11 @@ class QuranSettingsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateTranslation(TranslationLanguage language) async {
-    _value = _value.copyWith(translation: language);
+  Future<void> updateTranslation(TranslationSource source) async {
+    _value = _value.copyWith(translation: source);
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_translationKey, _translationCode(language));
+    await prefs.setString(_translationKey, source.name);
   }
 
   Future<void> setShowLatin(bool enabled) async {
@@ -84,22 +109,19 @@ class QuranSettingsController extends ChangeNotifier {
     await prefs.setBool(_showWordByWordKey, enabled);
   }
 
-  TranslationLanguage _parseTranslation(String code) {
-    switch (code) {
-      case 'en':
-        return TranslationLanguage.en;
-      case 'id':
-      default:
-        return TranslationLanguage.id;
+  TranslationSource _parseTranslation(String? code) {
+    if (code == null) {
+      return TranslationSource.idKemenag;
     }
-  }
-
-  String _translationCode(TranslationLanguage language) {
-    switch (language) {
-      case TranslationLanguage.en:
-        return 'en';
-      case TranslationLanguage.id:
-        return 'id';
+    if (code == 'id') {
+      return TranslationSource.idKemenag;
     }
+    if (code == 'en') {
+      return TranslationSource.enAbdelHaleem;
+    }
+    return TranslationSource.values.firstWhere(
+      (source) => source.name == code,
+      orElse: () => TranslationSource.idKemenag,
+    );
   }
 }

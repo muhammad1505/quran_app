@@ -6,6 +6,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'package:quran_app/core/settings/prayer_settings.dart';
+
 class PrayerTimesPage extends StatefulWidget {
   const PrayerTimesPage({super.key});
 
@@ -18,11 +20,28 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
   PrayerTimes? _prayerTimes;
   Prayer? _nextPrayer;
   bool _isLoading = true;
+  Coordinates? _coordinates;
+  final PrayerSettingsController _prayerSettings =
+      PrayerSettingsController.instance;
 
   @override
   void initState() {
     super.initState();
+    _prayerSettings.addListener(_onSettingsChanged);
+    _prayerSettings.load();
     _initLocationAndPrayers();
+  }
+
+  @override
+  void dispose() {
+    _prayerSettings.removeListener(_onSettingsChanged);
+    super.dispose();
+  }
+
+  void _onSettingsChanged() {
+    if (_coordinates != null) {
+      _calculatePrayerTimes(_coordinates!);
+    }
   }
 
   Future<void> _initLocationAndPrayers() async {
@@ -60,22 +79,8 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
         });
       }
 
-      // 4. Calculate Prayer Times
-      final myCoordinates = Coordinates(position.latitude, position.longitude);
-      
-      // Use Singapore method as base but customize for Indonesia (Kemenag-like)
-      // Kemenag standard: Subuh 20 deg, Isya 18 deg. 
-      // Singapore uses 20, 18. So it is very close.
-      final params = CalculationMethod.singapore.getParameters();
-      params.madhab = Madhab.shafi;
-      
-      final prayerTimes = PrayerTimes.today(myCoordinates, params);
-      
-      setState(() {
-        _prayerTimes = prayerTimes;
-        _nextPrayer = prayerTimes.nextPrayer();
-        _isLoading = false;
-      });
+      _coordinates = Coordinates(position.latitude, position.longitude);
+      _calculatePrayerTimes(_coordinates!);
 
     } catch (e) {
       setState(() {
@@ -83,6 +88,16 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
         _isLoading = false;
       });
     }
+  }
+
+  void _calculatePrayerTimes(Coordinates coordinates) {
+    final params = _prayerSettings.buildParameters();
+    final prayerTimes = PrayerTimes.today(coordinates, params);
+    setState(() {
+      _prayerTimes = prayerTimes;
+      _nextPrayer = prayerTimes.nextPrayer();
+      _isLoading = false;
+    });
   }
 
   @override

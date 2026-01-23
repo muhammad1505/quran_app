@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:quran/quran.dart' as quran;
+import 'package:quran_app/core/services/audio_cache_service.dart';
 import 'package:quran_app/core/services/word_by_word_service.dart';
+import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 
 class QuranPage extends StatelessWidget {
@@ -129,8 +131,12 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   late AudioPlayer _audioPlayer;
   bool _isPlaying = false;
   bool _isLoading = false;
+  bool _isDownloading = false;
+  bool _isDownloaded = false;
   final QuranSettingsController _quranSettings =
       QuranSettingsController.instance;
+  final AudioSettingsController _audioSettings =
+      AudioSettingsController.instance;
 
   @override
   void initState() {
@@ -145,12 +151,16 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
       });
     });
     _quranSettings.addListener(_onSettingsChanged);
+    _audioSettings.addListener(_onAudioSettingsChanged);
     _quranSettings.load();
+    _audioSettings.load();
+    _refreshDownloadStatus();
   }
 
   @override
   void dispose() {
     _quranSettings.removeListener(_onSettingsChanged);
+    _audioSettings.removeListener(_onAudioSettingsChanged);
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -161,14 +171,35 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     }
   }
 
+  void _onAudioSettingsChanged() {
+    _audioPlayer.setVolume(_audioSettings.value.volume);
+    _refreshDownloadStatus();
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   Future<void> _playPause() async {
     if (_isPlaying) {
       await _audioPlayer.pause();
     } else {
       if (_audioPlayer.processingState == ProcessingState.idle) {
-        final String url = quran.getAudioURLBySurah(widget.surahNumber);
         try {
-          await _audioPlayer.setUrl(url);
+          final qariId = _audioSettings.value.qariId;
+          final localFile = await AudioCacheService.instance.getLocalSurahFile(
+            widget.surahNumber,
+            qariId,
+          );
+          if (localFile != null) {
+            await _audioPlayer.setFilePath(localFile.path);
+          } else {
+            final url = AudioCacheService.instance.surahUrl(
+              widget.surahNumber,
+              qariId,
+            );
+            await _audioPlayer.setUrl(url);
+          }
+          _audioPlayer.setVolume(_audioSettings.value.volume);
           await _audioPlayer.play();
         } catch (e) {
           if (mounted) {
@@ -183,11 +214,13 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     }
   }
 
-  TranslationType _translationType(TranslationLanguage language) {
-    switch (language) {
-      case TranslationLanguage.id:
+  TranslationType _translationType(TranslationSource source) {
+    switch (source) {
+      case TranslationSource.idKemenag:
         return TranslationType.idIndonesianIslamicAffairsMinistry;
-      case TranslationLanguage.en:
+      case TranslationSource.enAbdelHaleem:
+        return TranslationType.enMASAbdelHaleem;
+      case TranslationSource.enSaheeh:
         return TranslationType.enMASAbdelHaleem;
     }
   }
@@ -342,6 +375,47 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     );
   }
 
+  Future<void> _refreshDownloadStatus() async {
+    final downloaded = await AudioCacheService.instance.isSurahDownloaded(
+      widget.surahNumber,
+      _audioSettings.value.qariId,
+    );
+    if (mounted) {
+      setState(() {
+        _isDownloaded = downloaded;
+      });
+    }
+  }
+
+  Future<void> _toggleDownload() async {
+    if (_isDownloading) return;
+    setState(() => _isDownloading = true);
+    try {
+      if (_isDownloaded) {
+        await AudioCacheService.instance.deleteSurah(
+          widget.surahNumber,
+          _audioSettings.value.qariId,
+        );
+      } else {
+        await AudioCacheService.instance.downloadSurah(
+          widget.surahNumber,
+          _audioSettings.value.qariId,
+        );
+      }
+      await _refreshDownloadStatus();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal mengunduh audio: $e")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isDownloading = false);
+      }
+    }
+  }
+
   Widget _buildWordChip(WordByWordItem word, bool showLatin) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -409,6 +483,21 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
         ),
         actions: [
           IconButton(
+            onPressed: _isDownloading ? null : _toggleDownload,
+            icon: _isDownloading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    _isDownloaded ? Icons.check_circle : Icons.download,
+                  ),
+            tooltip: _isDownloaded
+                ? "Hapus audio offline"
+                : "Unduh audio untuk offline",
+          ),
+          IconButton(
             onPressed: _isLoading ? null : _playPause,
             icon: _isLoading
                 ? SizedBox(
@@ -466,10 +555,16 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                       : VerseMode.uthmani,
                 ).text;
                 final translationText = _sanitizeTranslation(
-                  AlQuran.translation(
-                    _translationType(settings.translation),
-                    verseKey,
-                  ).text,
+                  settings.translation == TranslationSource.enSaheeh
+                      ? quran.getVerseTranslation(
+                          widget.surahNumber,
+                          verseNumber,
+                          translation: quran.Translation.enSaheeh,
+                        )
+                      : AlQuran.translation(
+                          _translationType(settings.translation),
+                          verseKey,
+                        ).text,
                 );
                 final transliterationText = settings.showLatin
                     ? _decodeHtml(AlQuran.transliteration(verseKey).text)
@@ -565,7 +660,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                         _buildWordByWordSection(
                           verseNumber: verseNumber,
                           showLatin: settings.showLatin,
-                          language: settings.translation,
+                          language: settings.translation.language,
                         ),
                     ],
                   ),

@@ -6,6 +6,7 @@ import 'features/qibla/presentation/pages/qibla_page.dart';
 import 'features/doa/presentation/pages/doa_page.dart';
 import 'features/prayer_guide/presentation/pages/prayer_guide_page.dart';
 import 'features/settings/presentation/pages/settings_page.dart';
+import 'features/asmaul_husna/presentation/pages/asmaul_husna_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -184,6 +185,12 @@ class HomePage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const PrayerGuidePage()),
+                  );
+                }),
+                _buildMenuIcon(context, Icons.auto_awesome, "Asmaul", () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AsmaulHusnaPage()),
                   );
                 }),
               ],
