@@ -242,7 +242,7 @@ const List<PrayerStep> _steps = [
         "At-tahiyyatu lillahi was-salawatu wat-tayyibat. Assalamu 'alaika ayyuhan-nabiyyu wa rahmatullahi wa barakatuh. Assalamu 'alaina wa 'ala 'ibadillahis-salihin. Asyhadu an la ilaha illallah wa asyhadu anna Muhammadan 'abduhu wa rasuluh.",
     meaning:
         "Segala penghormatan, shalawat, dan kebaikan hanya bagi Allah... Aku bersaksi tiada Tuhan selain Allah dan Muhammad adalah hamba serta utusan-Nya.",
-    illustration: PrayerIllustrationType.sitting,
+    illustration: PrayerIllustrationType.tasyahud,
   ),
   PrayerStep(
     number: 15,
@@ -256,7 +256,7 @@ const List<PrayerStep> _steps = [
         "Allahumma salli 'ala Muhammad wa 'ala ali Muhammad kama sallaita 'ala Ibrahim wa 'ala ali Ibrahim innaka hamidum majid.\nAllahumma barik 'ala Muhammad wa 'ala ali Muhammad kama barakta 'ala Ibrahim wa 'ala ali Ibrahim innaka hamidum majid.\nAllahumma inni a'udzu bika min 'adzabi jahannam wa min 'adzabil-qabr wa min fitnatil-mahya wal-mamat wa min sharri fitnatil-masihid-dajjal.",
     meaning:
         "Ya Allah, limpahkan shalawat dan keberkahan kepada Muhammad dan keluarga Muhammad sebagaimana Engkau limpahkan kepada Ibrahim dan keluarga Ibrahim. Ya Allah, aku berlindung kepada-Mu dari azab neraka, azab kubur, fitnah hidup dan mati, serta fitnah Al-Masih Ad-Dajjal.",
-    illustration: PrayerIllustrationType.sitting,
+    illustration: PrayerIllustrationType.tasyahud,
   ),
   PrayerStep(
     number: 16,
@@ -267,6 +267,7 @@ const List<PrayerStep> _steps = [
     arabic: "السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللَّهِ",
     latin: "Assalamu'alaikum warahmatullah.",
     meaning: "Semoga keselamatan dan rahmat Allah tercurah kepada kalian.",
+    illustration: PrayerIllustrationType.salam,
   ),
 ];
 
@@ -356,7 +357,16 @@ class _ArabicSection extends StatelessWidget {
   }
 }
 
-enum PrayerIllustrationType { none, standing, takbir, ruku, sujud, sitting }
+enum PrayerIllustrationType {
+  none,
+  standing,
+  takbir,
+  ruku,
+  sujud,
+  sitting,
+  tasyahud,
+  salam,
+}
 
 class PrayerIllustration extends StatelessWidget {
   final PrayerIllustrationType type;
@@ -368,6 +378,19 @@ class PrayerIllustration extends StatelessWidget {
     if (type == PrayerIllustrationType.none) {
       return const SizedBox.shrink();
     }
+    final assetPath = _assetPath(type);
+    if (assetPath != null) {
+      return Center(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Image.asset(
+            assetPath,
+            height: 220,
+            fit: BoxFit.contain,
+          ),
+        ),
+      );
+    }
     final color = Theme.of(context).primaryColor;
     return Center(
       child: CustomPaint(
@@ -375,6 +398,27 @@ class PrayerIllustration extends StatelessWidget {
         painter: _PrayerIllustrationPainter(type: type, color: color),
       ),
     );
+  }
+
+  String? _assetPath(PrayerIllustrationType type) {
+    switch (type) {
+      case PrayerIllustrationType.takbir:
+        return 'assets/illustrations/panduan_sholat_nolabel_01.png';
+      case PrayerIllustrationType.standing:
+        return 'assets/illustrations/panduan_sholat_nolabel_02.png';
+      case PrayerIllustrationType.ruku:
+        return 'assets/illustrations/panduan_sholat_nolabel_05.png';
+      case PrayerIllustrationType.sujud:
+        return 'assets/illustrations/panduan_sholat_nolabel_06.png';
+      case PrayerIllustrationType.sitting:
+        return 'assets/illustrations/panduan_sholat_nolabel_07.png';
+      case PrayerIllustrationType.salam:
+        return 'assets/illustrations/panduan_sholat_nolabel_08.png';
+      case PrayerIllustrationType.tasyahud:
+        return 'assets/illustrations/panduan_sholat_nolabel_09.png';
+      case PrayerIllustrationType.none:
+        return null;
+    }
   }
 }
 
