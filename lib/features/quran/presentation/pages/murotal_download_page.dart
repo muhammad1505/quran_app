@@ -142,7 +142,7 @@ class _MurotalDownloadPageState extends State<MurotalDownloadPage> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _selectedQariId,
+                    initialValue: _selectedQariId,
                     decoration: const InputDecoration(
                       labelText: 'Qari',
                       border: OutlineInputBorder(),
