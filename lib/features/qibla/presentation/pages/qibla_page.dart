@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:smooth_compass/utils/src/compass_ui.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:adhan/adhan.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:math' as math;
 
 class QiblaPage extends StatefulWidget {
   const QiblaPage({super.key});
@@ -56,52 +57,67 @@ class _QiblaPageState extends State<QiblaPage> {
             )
           : _qiblaDirection == null
           ? const Center(child: CircularProgressIndicator())
-          : Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "Arah Ka'bah",
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "${_qiblaDirection!.toStringAsFixed(1)}°",
-                    style: GoogleFonts.poppins(
-                      fontSize: 56,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  SizedBox(
-                    height: 300,
-                    width: 300,
-                    child: SmoothCompass(
-                      rotationSpeed: 200,
-                      height: 300,
-                      width: 300,
-                      compassBuilder: (context, snapshot, child) {
-                        // Adjust rotation so Qibla (0 degrees in UI terms) points up
-                        // If _qiblaDirection is e.g. 295, we want the needle to point to 295.
-                        // snapshot.data is the device heading.
+          : StreamBuilder<CompassEvent>(
+              stream: FlutterCompass.events,
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Text('Error reading heading: ${snapshot.error}');
+                }
 
-                        // Simple Compass Logic:
-                        // Needle should rotate to: Qibla Direction - Device Heading
-                        return AnimatedRotation(
-                          duration: const Duration(milliseconds: 200),
-                          turns:
-                              (_qiblaDirection! -
-                                  (snapshot?.data?.angle ?? 0)) /
-                              360,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              // Compass Background
-                              Container(
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                double? direction = snapshot.data?.heading;
+
+                // if direction is null, then device does not support this sensor
+                if (direction == null) {
+                  return const Center(
+                    child: Text("Device does not support sensors"),
+                  );
+                }
+
+                // Calculate rotation: Qibla - Device Heading
+                // Normalize to 0-360
+                double rotation = (_qiblaDirection! - direction);
+                // Convert to radians for Transform.rotate (but we use turns in AnimatedRotation which is 0-1)
+
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Arah Ka'bah",
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        "${_qiblaDirection!.toStringAsFixed(1)}°",
+                        style: GoogleFonts.poppins(
+                          fontSize: 56,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      SizedBox(
+                        height: 300,
+                        width: 300,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Static Compass Dial (Background) - Rotates with device
+                            AnimatedRotation(
+                              duration: const Duration(milliseconds: 200),
+                              turns:
+                                  -direction /
+                                  360, // Rotate opposite to device heading to keep North up?
+                              // No, typically dial moves. Let's make the needle move to Qibla relative to North.
+                              // Approach: Rotate everything so North is UP (0), then show Qibla relative to North.
+                              child: Container(
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: Theme.of(context).cardTheme.color,
@@ -121,8 +137,13 @@ class _QiblaPageState extends State<QiblaPage> {
                                   color: Colors.grey.withValues(alpha: 0.2),
                                 ),
                               ),
-                              // Qibla Needle
-                              Column(
+                            ),
+
+                            // Qibla Needle - Rotates to point to Qibla relative to device heading
+                            AnimatedRotation(
+                              duration: const Duration(milliseconds: 200),
+                              turns: (_qiblaDirection! - direction) / 360,
+                              child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
@@ -130,17 +151,41 @@ class _QiblaPageState extends State<QiblaPage> {
                                     size: 50,
                                     color: Theme.of(context).primaryColor,
                                   ),
-                                  const SizedBox(height: 100),
+                                  const SizedBox(height: 100), // Pivot offset
                                 ],
                               ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.info_outline, size: 20),
+                            const SizedBox(width: 10),
+                            Text(
+                              "Akurasi Kompas: ${snapshot.data?.accuracy ?? 'Unknown'}",
+                              style: GoogleFonts.poppins(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
     );
   }
