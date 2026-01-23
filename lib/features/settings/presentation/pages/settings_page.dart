@@ -147,23 +147,37 @@ class _SettingsPageState extends State<SettingsPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            RadioListTile(
+            ListTile(
               title: const Text("Bahasa Indonesia"),
-              value: 'id',
-              groupValue: _selectedTranslation,
-              onChanged: (val) {
-                setState(() => _selectedTranslation = val.toString());
-                _saveSetting('translation', val);
+              leading: Radio<String>(
+                value: 'id',
+                groupValue: _selectedTranslation,
+                onChanged: (val) {
+                  setState(() => _selectedTranslation = val.toString());
+                  _saveSetting('translation', val);
+                  Navigator.pop(ctx);
+                },
+              ),
+              onTap: () {
+                setState(() => _selectedTranslation = 'id');
+                _saveSetting('translation', 'id');
                 Navigator.pop(ctx);
               },
             ),
-            RadioListTile(
+            ListTile(
               title: const Text("English (Saheeh)"),
-              value: 'en',
-              groupValue: _selectedTranslation,
-              onChanged: (val) {
-                setState(() => _selectedTranslation = val.toString());
-                _saveSetting('translation', val);
+              leading: Radio<String>(
+                value: 'en',
+                groupValue: _selectedTranslation,
+                onChanged: (val) {
+                  setState(() => _selectedTranslation = val.toString());
+                  _saveSetting('translation', val);
+                  Navigator.pop(ctx);
+                },
+              ),
+              onTap: () {
+                setState(() => _selectedTranslation = 'en');
+                _saveSetting('translation', 'en');
                 Navigator.pop(ctx);
               },
             ),
@@ -191,13 +205,20 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildQariItem(String id, String name) {
-    return RadioListTile(
+    return ListTile(
       title: Text(name),
-      value: id,
-      groupValue: _selectedQari,
-      onChanged: (val) {
-        setState(() => _selectedQari = val.toString());
-        _saveSetting('qari', val);
+      leading: Radio<String>(
+        value: id,
+        groupValue: _selectedQari,
+        onChanged: (val) {
+          setState(() => _selectedQari = val.toString());
+          _saveSetting('qari', val);
+          Navigator.pop(context);
+        },
+      ),
+      onTap: () {
+        setState(() => _selectedQari = id);
+        _saveSetting('qari', id);
         Navigator.pop(context);
       },
     );

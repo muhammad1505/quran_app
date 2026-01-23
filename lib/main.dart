@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'core/theme/app_theme.dart';
-import 'core/widgets/custom_loading.dart';
 import 'features/quran/presentation/pages/quran_page.dart';
 import 'features/prayer_times/presentation/pages/prayer_times_page.dart';
 import 'features/qibla/presentation/pages/qibla_page.dart';
