@@ -54,26 +54,20 @@ jobs:
           if [ -f "$KTS_FILE" ]; then
             echo "Detected Kotlin DSL ($KTS_FILE)"
             # Kotlin DSL Injection
-            # Add MultiDex to defaultConfig
             sed -i '/defaultConfig {/a \        multiDexEnabled = true' "$KTS_FILE"
-            
-            # Add Compile Options
             sed -i '/compileOptions {/a \        isCoreLibraryDesugaringEnabled = true' "$KTS_FILE"
             
-            # Add Dependencies
-            sed -i '/dependencies {/a \    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")' "$KTS_FILE"
+            # Append dependency at the end (Safe approach)
+            echo 'dependencies { coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3") }' >> "$KTS_FILE"
             
           elif [ -f "$GRADLE_FILE" ]; then
             echo "Detected Groovy DSL ($GRADLE_FILE)"
             # Groovy DSL Injection
-            # Add MultiDex
             sed -i '/defaultConfig {/a \        multiDexEnabled true' "$GRADLE_FILE"
-            
-            # Add Compile Options
             sed -i '/compileOptions {/a \        coreLibraryDesugaringEnabled true' "$GRADLE_FILE"
             
-            # Add Dependencies
-            sed -i '/dependencies {/a \    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.3"' "$GRADLE_FILE"
+            # Append dependency at the end (Safe approach)
+            echo 'dependencies { coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.3" }' >> "$GRADLE_FILE"
           else
              echo "❌ No build.gradle found!"
              exit 1
