@@ -277,90 +277,47 @@ class _SettingsPageState extends State<SettingsPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              title: Text(TranslationSource.idKemenag.label),
-              leading: Radio<String>(
-                value: TranslationSource.idKemenag.name,
-                // ignore: deprecated_member_use
-                groupValue:
-                    _quranSettings.value.translation.name,
-                // ignore: deprecated_member_use
-                onChanged: (val) {
-                  _quranSettings.updateTranslation(TranslationSource.idKemenag);
-                  Navigator.pop(ctx);
-                },
-              ),
+            _buildSelectTile(
+              title: TranslationSource.idKemenag.label,
+              selected:
+                  _quranSettings.value.translation == TranslationSource.idKemenag,
               onTap: () {
                 _quranSettings.updateTranslation(TranslationSource.idKemenag);
                 Navigator.pop(ctx);
               },
             ),
-            ListTile(
-              title: Text(TranslationSource.idKingFahad.label),
-              leading: Radio<String>(
-                value: TranslationSource.idKingFahad.name,
-                // ignore: deprecated_member_use
-                groupValue: _quranSettings.value.translation.name,
-                // ignore: deprecated_member_use
-                onChanged: (val) {
-                  _quranSettings
-                      .updateTranslation(TranslationSource.idKingFahad);
-                  Navigator.pop(ctx);
-                },
-              ),
+            _buildSelectTile(
+              title: TranslationSource.idKingFahad.label,
+              selected: _quranSettings.value.translation ==
+                  TranslationSource.idKingFahad,
               onTap: () {
                 _quranSettings.updateTranslation(TranslationSource.idKingFahad);
                 Navigator.pop(ctx);
               },
             ),
-            ListTile(
-              title: Text(TranslationSource.idSabiq.label),
-              leading: Radio<String>(
-                value: TranslationSource.idSabiq.name,
-                // ignore: deprecated_member_use
-                groupValue: _quranSettings.value.translation.name,
-                // ignore: deprecated_member_use
-                onChanged: (val) {
-                  _quranSettings.updateTranslation(TranslationSource.idSabiq);
-                  Navigator.pop(ctx);
-                },
-              ),
+            _buildSelectTile(
+              title: TranslationSource.idSabiq.label,
+              selected:
+                  _quranSettings.value.translation == TranslationSource.idSabiq,
               onTap: () {
                 _quranSettings.updateTranslation(TranslationSource.idSabiq);
                 Navigator.pop(ctx);
               },
             ),
-            ListTile(
-              title: Text(TranslationSource.enAbdelHaleem.label),
-              leading: Radio<String>(
-                value: TranslationSource.enAbdelHaleem.name,
-                // ignore: deprecated_member_use
-                groupValue: _quranSettings.value.translation.name,
-                // ignore: deprecated_member_use
-                onChanged: (val) {
-                  _quranSettings.updateTranslation(
-                      TranslationSource.enAbdelHaleem);
-                  Navigator.pop(ctx);
-                },
-              ),
+            _buildSelectTile(
+              title: TranslationSource.enAbdelHaleem.label,
+              selected: _quranSettings.value.translation ==
+                  TranslationSource.enAbdelHaleem,
               onTap: () {
                 _quranSettings.updateTranslation(
                     TranslationSource.enAbdelHaleem);
                 Navigator.pop(ctx);
               },
             ),
-            ListTile(
-              title: Text(TranslationSource.enSaheeh.label),
-              leading: Radio<String>(
-                value: TranslationSource.enSaheeh.name,
-                // ignore: deprecated_member_use
-                groupValue: _quranSettings.value.translation.name,
-                // ignore: deprecated_member_use
-                onChanged: (val) {
-                  _quranSettings.updateTranslation(TranslationSource.enSaheeh);
-                  Navigator.pop(ctx);
-                },
-              ),
+            _buildSelectTile(
+              title: TranslationSource.enSaheeh.label,
+              selected:
+                  _quranSettings.value.translation == TranslationSource.enSaheeh,
               onTap: () {
                 _quranSettings.updateTranslation(TranslationSource.enSaheeh);
                 Navigator.pop(ctx);
@@ -380,9 +337,30 @@ class _SettingsPageState extends State<SettingsPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildQariItem('alafasy', "Mishary Rashid Alafasy"),
-            _buildQariItem('abdulbasit', "Abdul Basit (Murattal)"),
-            _buildQariItem('basfar', "Abdullah Basfar"),
+            _buildSelectTile(
+              title: "Mishary Rashid Alafasy",
+              selected: _audioSettings.value.qariId == 'alafasy',
+              onTap: () {
+                _audioSettings.updateQari('alafasy');
+                Navigator.pop(ctx);
+              },
+            ),
+            _buildSelectTile(
+              title: "Abdul Basit (Murattal)",
+              selected: _audioSettings.value.qariId == 'abdulbasit',
+              onTap: () {
+                _audioSettings.updateQari('abdulbasit');
+                Navigator.pop(ctx);
+              },
+            ),
+            _buildSelectTile(
+              title: "Abdullah Basfar",
+              selected: _audioSettings.value.qariId == 'basfar',
+              onTap: () {
+                _audioSettings.updateQari('basfar');
+                Navigator.pop(ctx);
+              },
+            ),
           ],
         ),
       ),
@@ -444,15 +422,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               ...ArabicFontFamily.values.map(
-                (font) => RadioListTile<ArabicFontFamily>(
-                  title: Text(font.label),
-                  value: font,
-                  groupValue: _quranSettings.value.arabicFontFamily,
-                  onChanged: (value) {
-                    if (value != null) {
-                      _quranSettings.setArabicFontFamily(value);
-                      Navigator.pop(context);
-                    }
+                (font) => _buildSelectTile(
+                  title: font.label,
+                  selected: _quranSettings.value.arabicFontFamily == font,
+                  onTap: () {
+                    _quranSettings.setArabicFontFamily(font);
+                    Navigator.pop(context);
                   },
                 ),
               ),
@@ -480,15 +455,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               ...speeds.map(
-                (speed) => RadioListTile<double>(
-                  title: Text('${speed.toStringAsFixed(2)}x'),
-                  value: speed,
-                  groupValue: _audioSettings.value.playbackSpeed,
-                  onChanged: (value) {
-                    if (value != null) {
-                      _audioSettings.updatePlaybackSpeed(value);
-                      Navigator.pop(context);
-                    }
+                (speed) => _buildSelectTile(
+                  title: '${speed.toStringAsFixed(2)}x',
+                  selected: _audioSettings.value.playbackSpeed == speed,
+                  onTap: () {
+                    _audioSettings.updatePlaybackSpeed(speed);
+                    Navigator.pop(context);
                   },
                 ),
               ),
@@ -593,23 +565,17 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildQariItem(String id, String name) {
+  Widget _buildSelectTile({
+    required String title,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
     return ListTile(
-      title: Text(name),
-      leading: Radio<String>(
-        value: id,
-        // ignore: deprecated_member_use
-        groupValue: _audioSettings.value.qariId,
-        // ignore: deprecated_member_use
-        onChanged: (val) {
-          _audioSettings.updateQari(val.toString());
-          Navigator.pop(context);
-        },
-      ),
-      onTap: () {
-        _audioSettings.updateQari(id);
-        Navigator.pop(context);
-      },
+      title: Text(title),
+      trailing: selected
+          ? Icon(Icons.check, color: Theme.of(context).primaryColor)
+          : null,
+      onTap: onTap,
     );
   }
 
@@ -621,18 +587,9 @@ class _SettingsPageState extends State<SettingsPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: PrayerCalculationMethod.values.map((method) {
-            return ListTile(
-              title: Text(prayerMethodLabel(method)),
-              leading: Radio<String>(
-                value: method.name,
-                // ignore: deprecated_member_use
-                groupValue: _prayerSettings.value.method.name,
-                // ignore: deprecated_member_use
-                onChanged: (val) {
-                  _prayerSettings.updateMethod(method);
-                  Navigator.pop(ctx);
-                },
-              ),
+            return _buildSelectTile(
+              title: prayerMethodLabel(method),
+              selected: _prayerSettings.value.method == method,
               onTap: () {
                 _prayerSettings.updateMethod(method);
                 Navigator.pop(ctx);
@@ -652,18 +609,9 @@ class _SettingsPageState extends State<SettingsPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: PrayerMadhab.values.map((madhab) {
-            return ListTile(
-              title: Text(prayerMadhabLabel(madhab)),
-              leading: Radio<String>(
-                value: madhab.name,
-                // ignore: deprecated_member_use
-                groupValue: _prayerSettings.value.madhab.name,
-                // ignore: deprecated_member_use
-                onChanged: (val) {
-                  _prayerSettings.updateMadhab(madhab);
-                  Navigator.pop(ctx);
-                },
-              ),
+            return _buildSelectTile(
+              title: prayerMadhabLabel(madhab),
+              selected: _prayerSettings.value.madhab == madhab,
               onTap: () {
                 _prayerSettings.updateMadhab(madhab);
                 Navigator.pop(ctx);

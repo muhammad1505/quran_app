@@ -613,7 +613,6 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
           color: theme.textTheme.bodyLarge?.color,
         );
       case ArabicFontFamily.amiri:
-      default:
         return GoogleFonts.amiri(
           fontSize: settings.arabicFontSize,
           color: theme.textTheme.bodyLarge?.color,
@@ -809,7 +808,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<ArabicFontFamily>(
-                      value: settings.arabicFontFamily,
+                      initialValue: settings.arabicFontFamily,
                       decoration: const InputDecoration(
                         labelText: 'Font Arab',
                         border: OutlineInputBorder(),
