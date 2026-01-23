@@ -39,7 +39,7 @@ class QiblaCompass extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: FlutterQiblah.qiblaStream,
+      stream: FlutterQiblah.qiblahStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(
@@ -50,7 +50,7 @@ class QiblaCompass extends StatelessWidget {
         }
 
         final qiblaDirection = snapshot.data as QiblaDirection;
-        final direction = qiblaDirection.qibla;
+        final direction = qiblaDirection.qiblah;
 
         return Center(
           child: Column(
