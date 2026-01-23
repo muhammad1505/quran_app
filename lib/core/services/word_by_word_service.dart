@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/services.dart';
 
@@ -22,9 +21,10 @@ class WordByWordService {
 
   static final WordByWordService instance = WordByWordService._();
 
-  Future<Map<String, List<WordByWordItem>>>? _loadFuture;
+  Future<Map<String, List<WordByWordItem>>>? _loadEnFuture;
+  Future<Map<String, List<WordByWordItem>>>? _loadIdFuture;
   Map<String, List<WordByWordItem>>? _cacheEn;
-  final Map<String, Map<String, List<WordByWordItem>>> _remoteCache = {};
+  Map<String, List<WordByWordItem>>? _cacheId;
 
   Future<List<WordByWordItem>> wordsFor(
     int chapter,
@@ -32,28 +32,18 @@ class WordByWordService {
     required TranslationLanguage language,
   }) async {
     final key = '$chapter:$verse';
-    if (language == TranslationLanguage.en) {
-      final data = await _loadEnglish();
-      return data[key] ?? const [];
-    }
-    if (_remoteCache[language.name]?.containsKey(key) == true) {
-      return _remoteCache[language.name]![key] ?? const [];
-    }
-    final fetched = await _fetchRemoteWords(
-      chapter: chapter,
-      verse: verse,
-      languageCode: _languageCode(language),
-    );
-    _remoteCache.putIfAbsent(language.name, () => {})[key] = fetched;
-    return fetched;
+    final data = language == TranslationLanguage.id
+        ? await _loadIndonesian()
+        : await _loadEnglish();
+    return data[key] ?? const [];
   }
 
   Future<Map<String, List<WordByWordItem>>> _loadEnglish() {
     if (_cacheEn != null) {
       return Future.value(_cacheEn);
     }
-    _loadFuture ??= _loadFromAssets();
-    return _loadFuture!;
+    _loadEnFuture ??= _loadFromAssets();
+    return _loadEnFuture!;
   }
 
   Future<Map<String, List<WordByWordItem>>> _loadFromAssets() async {
@@ -107,60 +97,36 @@ class WordByWordService {
     return result;
   }
 
-  Future<List<WordByWordItem>> _fetchRemoteWords({
-    required int chapter,
-    required int verse,
-    required String languageCode,
-  }) async {
-    final uri = Uri.parse(
-      'https://api.quran.com/api/v4/verses/by_key/$chapter:$verse'
-      '?words=true&language=$languageCode',
-    );
-    try {
-      final client = HttpClient();
-      final request = await client.getUrl(uri);
-      final response = await request.close();
-      if (response.statusCode != 200) {
-        return const [];
-      }
-      final body = await response.transform(utf8.decoder).join();
-      final jsonMap = jsonDecode(body) as Map<String, dynamic>;
-      final verseData = jsonMap['verse'] as Map<String, dynamic>?;
-      if (verseData == null) {
-        return const [];
-      }
-      final words = verseData['words'] as List<dynamic>? ?? const [];
-      final results = <WordByWordItem>[];
-      for (final rawWord in words) {
+  Future<Map<String, List<WordByWordItem>>> _loadIndonesian() {
+    if (_cacheId != null) {
+      return Future.value(_cacheId);
+    }
+    _loadIdFuture ??= _loadFromIdAssets();
+    return _loadIdFuture!;
+  }
+
+  Future<Map<String, List<WordByWordItem>>> _loadFromIdAssets() async {
+    final jsonString =
+        await rootBundle.loadString('assets/word_by_word_id.json');
+    final data = jsonDecode(jsonString) as Map<String, dynamic>;
+    final Map<String, List<WordByWordItem>> result = {};
+    data.forEach((key, value) {
+      final items = <WordByWordItem>[];
+      for (final rawWord in value as List<dynamic>) {
         final word = rawWord as Map<String, dynamic>;
-        if (word['char_type_name'] != 'word') {
-          continue;
-        }
-        final translationMap =
-            word['translation'] as Map<String, dynamic>? ?? const {};
-        final transliterationMap =
-            word['transliteration'] as Map<String, dynamic>? ?? const {};
-        results.add(
+        items.add(
           WordByWordItem(
-            arabic: (word['text'] as String?) ?? '',
-            transliteration:
-                (transliterationMap['text'] as String?) ?? '',
-            translation: (translationMap['text'] as String?) ?? '',
+            arabic: (word['arabic'] as String?) ?? '',
+            transliteration: (word['transliteration'] as String?) ?? '',
+            translation: (word['translation'] as String?) ?? '',
           ),
         );
       }
-      return results;
-    } catch (_) {
-      return const [];
-    }
-  }
-
-  String _languageCode(TranslationLanguage language) {
-    switch (language) {
-      case TranslationLanguage.id:
-        return 'id';
-      case TranslationLanguage.en:
-        return 'en';
-    }
+      if (items.isNotEmpty) {
+        result[key] = items;
+      }
+    });
+    _cacheId = result;
+    return result;
   }
 }
