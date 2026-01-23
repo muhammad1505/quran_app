@@ -54,22 +54,10 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CustomLoadingWidget(),
-            const SizedBox(height: 20),
-            Text(
-              "AL-QURAN TERJEMAHAN",
-              style: GoogleFonts.amiri(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).primaryColor,
-                letterSpacing: 2.0,
-              ),
-            ),
-          ],
+      body: SizedBox.expand(
+        child: Image.asset(
+          'assets/splash.png',
+          fit: BoxFit.cover,
         ),
       ),
     );
