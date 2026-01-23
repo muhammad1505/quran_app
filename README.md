@@ -4,6 +4,7 @@
 ![Dart](https://img.shields.io/badge/Dart-3.0%2B-0175C2?logo=dart)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Build Status](https://github.com/muhammad1505/quran_app/actions/workflows/test.yml/badge.svg)
+![Build Release](https://github.com/muhammad1505/quran_app/actions/workflows/build.yml/badge.svg)
 
 A modern, aesthetically pleasing, and feature-rich Islamic application built with Flutter. Designed to provide a premium user experience with smooth animations, accurate prayer times, and a beautiful reading interface.
 
@@ -12,33 +13,33 @@ A modern, aesthetically pleasing, and feature-rich Islamic application built wit
 ### 📖 Al-Quran Digital
 *   **Beautiful Typography**: Uses **Amiri** font for Arabic script and **Poppins** for translations, ensuring readability and aesthetic appeal.
 *   **Audio Murottal**: Integrated streaming/playback for Surahs using `just_audio`.
-*   **Detail View**: Interactive verse list with "Basmalah" headers and gradient styling.
-*   **Translation**: Complete Indonesian translation (Kemenag).
+*   **Detail View**: Interactive verse list with "Basmalah" headers, gradient styling, and **Saheeh International** English translation.
+*   **Custom Animations**: Bespoke loading indicators (pulsing Quran icon) and page transitions.
 
 ### 🕌 Prayer Times (Jadwal Sholat)
 *   **Accurate Calculation**: Powered by the `adhan` library for precise timings based on location (Default: Jakarta, extensible to GPS).
 *   **Next Prayer Highlight**: visually distinct card showing the countdown/time for the upcoming prayer.
 *   **Dynamic UI**: Auto-highlighting of the current/next prayer time.
 
-### 🧭 Qibla Compass
-*   **Real-time Sensor**: Uses device accelerometer and magnetometer via `flutter_qiblah`.
-*   **Visual Feedback**: Large, clear degree indicators with a modern compass UI.
-*   **Animation**: Smooth rotation and calibration alerts.
+### 🧭 Qibla Compass (Refactored)
+*   **High Precision**: Manually calculates Qibla direction using the **Haversine formula** (via `adhan` library) and GPS coordinates.
+*   **Smooth UI**: Powered by `smooth_compass` for a jitter-free, fluid compass experience.
+*   **Reliable**: Replaced legacy plugins with robust `geolocator` and `permission_handler` implementation.
 
 ### 🎨 Premium UI/UX
 *   **Theming**: **Deep Emerald Green** & **Gold** palette for a luxurious Islamic feel.
 *   **Dark Mode**: Fully supported system-wide Dark Mode.
-*   **Custom Animations**: Bespoke loading indicators (pulsing Quran icon) and page transitions.
 *   **Modern Navigation**: Intuitive `NavigationBar` with custom icons.
 
 ## 🛠️ Tech Stack
 
 *   **Framework**: Flutter (Dart)
-*   **State Management**: `SetState` (Prototype) / structured for Bloc/Provider.
+*   **State Management**: `SetState` (Prototype)
 *   **Audio**: `just_audio`
-*   **Calculations**: `adhan` (Prayer Times), `flutter_qiblah` (Compass)
+*   **Calculations**: `adhan` (Prayer Times & Qibla Math)
+*   **Location & Sensors**: `geolocator`, `smooth_compass`, `permission_handler`
 *   **Fonts**: `google_fonts` (Poppins & Amiri)
-*   **Icons**: `cupertino_icons` & Material Symbols
+*   **Database**: `sqflite` (Ready for bookmarks/history)
 
 ## 🚀 Getting Started
 
@@ -60,9 +61,9 @@ A modern, aesthetically pleasing, and feature-rich Islamic application built wit
 
 ## 🤖 CI/CD (GitHub Actions)
 
-This project includes a CI/CD pipeline setup for:
+This project includes a robust CI/CD pipeline:
 *   **Testing**: Automatically runs `flutter analyze` and `flutter test` on every push.
-*   **Building**: Automatically builds a Release APK when a tag is pushed or manually triggered.
+*   **Building**: Automatically builds a Release APK (`split-per-abi`) when a tag (e.g., `v1.0.0`) is pushed.
 
 ## 📸 Screenshots
 
