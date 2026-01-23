@@ -201,6 +201,14 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
         .replaceAll('&quot;', '"');
   }
 
+  String _sanitizeTranslation(String input) {
+    final decoded = _decodeHtml(input);
+    final withoutFootnotes =
+        decoded.replaceAll(RegExp(r'<sup[^>]*>.*?</sup>'), '');
+    final withoutTags = withoutFootnotes.replaceAll(RegExp(r'<[^>]+>'), '');
+    return withoutTags.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
   List<InlineSpan> _buildTajweedSpans(
     String text,
     ThemeData theme,
@@ -295,10 +303,14 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   Widget _buildWordByWordSection({
     required int verseNumber,
     required bool showLatin,
+    required TranslationLanguage language,
   }) {
     return FutureBuilder<List<WordByWordItem>>(
-      future: WordByWordService.instance
-          .wordsFor(widget.surahNumber, verseNumber),
+      future: WordByWordService.instance.wordsFor(
+        widget.surahNumber,
+        verseNumber,
+        language: language,
+      ),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const SizedBox.shrink();
@@ -360,10 +372,10 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
               ),
             ),
           ],
-          if (word.translationEn.isNotEmpty) ...[
+          if (word.translation.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              word.translationEn,
+              word.translation,
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 10,
@@ -440,30 +452,6 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
               ),
             ),
           ),
-          if (settings.showWordByWord &&
-              settings.translation == TranslationLanguage.id)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      "Terjemahan per kata saat ini tersedia dalam Bahasa Inggris.",
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           Expanded(
             child: ListView.builder(
               itemCount: verseCount,
@@ -477,7 +465,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                       ? VerseMode.uthmaniTajweed
                       : VerseMode.uthmani,
                 ).text;
-                final translationText = _decodeHtml(
+                final translationText = _sanitizeTranslation(
                   AlQuran.translation(
                     _translationType(settings.translation),
                     verseKey,
@@ -577,6 +565,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                         _buildWordByWordSection(
                           verseNumber: verseNumber,
                           showLatin: settings.showLatin,
+                          language: settings.translation,
                         ),
                     ],
                   ),
