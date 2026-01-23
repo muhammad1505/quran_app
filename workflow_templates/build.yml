@@ -1,0 +1,39 @@
+name: Build Application
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+          
+      - name: Install dependencies
+        run: flutter pub get
+        
+      # Scaffolding is needed because the repo doesn't contain the platform folders yet (they are generated)
+      # In a real project, you'd commit the android/ios folders. 
+      # Here we regenerate them for the build to succeed on the CI.
+      - name: Scaffold Android
+        run: flutter create . --platforms android
+
+      - name: Build APK (Release)
+        run: flutter build apk --release --split-per-abi
+        
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apks
+          path: build/app/outputs/flutter-apk/*.apk
