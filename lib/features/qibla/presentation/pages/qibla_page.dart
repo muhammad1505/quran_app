@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_qiblah/flutter_qiblah.dart';
 import 'dart:math' as math;
+import 'package:google_fonts/google_fonts.dart';
 
 class QiblaPage extends StatelessWidget {
   const QiblaPage({super.key});
@@ -39,7 +40,7 @@ class QiblaCompass extends StatelessWidget {
       stream: FlutterQiblah.qiblaStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor));
         }
 
         final qiblaDirection = snapshot.data!;
@@ -49,29 +50,86 @@ class QiblaCompass extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text("${direction.toStringAsFixed(1)}°", style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
+               Text(
+                "Arah Ka'bah",
+                style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "${direction.toStringAsFixed(1)}°", 
+                style: GoogleFonts.poppins(
+                  fontSize: 56, 
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor
+                )
+              ),
+              const SizedBox(height: 40),
               Stack(
                 alignment: Alignment.center,
                 children: [
                   // Compass background
                   Container(
-                    width: 300,
-                    height: 300,
+                    width: 320,
+                    height: 320,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey, width: 2),
+                      color: Theme.of(context).cardTheme.color ?? Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 30,
+                          spreadRadius: 5,
+                        )
+                      ],
+                    ),
+                  ),
+                   // Compass Ticks
+                  Container(
+                    width: 300,
+                    height: 300,
+                     decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey.withOpacity(0.2), width: 2),
                     ),
                   ),
                   // Needle
                   Transform.rotate(
                     angle: (direction * (math.pi / 180) * -1),
-                    child: const Icon(Icons.navigation, size: 50, color: Colors.green),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                         // Custom Compass Art
+                         Icon(Icons.compass_calibration_outlined, size: 280, color: Colors.grey.withOpacity(0.2)),
+                         
+                         // The Needle
+                         Column(
+                           mainAxisSize: MainAxisSize.min,
+                           children: [
+                             Icon(Icons.navigation, size: 60, color: Theme.of(context).primaryColor),
+                             const SizedBox(height: 60), // Offset to center the rotation point roughly
+                           ],
+                         )
+                      ],
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              const Text("Pastikan GPS aktif dan kalibrasi kompas."),
+              const SizedBox(height: 40),
+              Container(
+                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                 decoration: BoxDecoration(
+                   color: Theme.of(context).primaryColor.withOpacity(0.1),
+                   borderRadius: BorderRadius.circular(30),
+                 ),
+                 child: Row(
+                   mainAxisSize: MainAxisSize.min,
+                   children: [
+                     const Icon(Icons.info_outline, size: 20),
+                     const SizedBox(width: 10),
+                     Text("Pastikan GPS aktif & kalibrasi kompas", style: GoogleFonts.poppins(fontSize: 12)),
+                   ],
+                 ),
+              )
             ],
           ),
         );
