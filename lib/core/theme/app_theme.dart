@@ -36,7 +36,7 @@ class AppTheme {
       ),
       cardTheme: CardTheme(
         elevation: 2,
-        shadowColor: primaryColor.withOpacity(0.1),
+        shadowColor: primaryColor.withValues(alpha: 0.1),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         surfaceTintColor: Colors.white,
       ),
@@ -49,8 +49,8 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
-        indicatorColor: primaryColor.withOpacity(0.1),
-        labelTextStyle: MaterialStateProperty.all(
+        indicatorColor: primaryColor.withValues(alpha: 0.1),
+        labelTextStyle: WidgetStateProperty.all(
           GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500),
         ),
       ),
@@ -88,15 +88,15 @@ class AppTheme {
       textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: const Color(0xFF1A1A1A),
-        indicatorColor: secondaryColor.withOpacity(0.2),
-        labelTextStyle: MaterialStateProperty.all(
+        indicatorColor: secondaryColor.withValues(alpha: 0.2),
+        labelTextStyle: WidgetStateProperty.all(
           GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w500,
             color: Colors.white70,
           ),
         ),
-        iconTheme: MaterialStateProperty.all(
+        iconTheme: WidgetStateProperty.all(
           const IconThemeData(color: Colors.white70),
         ),
       ),

@@ -59,7 +59,7 @@ class _CustomLoadingWidgetState extends State<CustomLoadingWidget>
                     height: 80,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Theme.of(context).primaryColor.withOpacity(0.2),
+                      color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
                     ),
                   ),
                 ),
@@ -73,7 +73,7 @@ class _CustomLoadingWidgetState extends State<CustomLoadingWidget>
                   color: Theme.of(context).cardTheme.color ?? Colors.white,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),

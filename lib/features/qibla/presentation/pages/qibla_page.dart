@@ -49,25 +49,25 @@ class QiblaCompass extends StatelessWidget {
           );
         }
 
-        final qiblaDirection = snapshot.data!;
+        final qiblaDirection = snapshot.data as QiblaDirection;
         final direction = qiblaDirection.qibla;
 
         return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
+               Text(
                 "Arah Ka'bah",
                 style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey),
               ),
               const SizedBox(height: 10),
               Text(
-                "${direction.toStringAsFixed(1)}°",
+                "${direction.toStringAsFixed(1)}°", 
                 style: GoogleFonts.poppins(
-                  fontSize: 56,
+                  fontSize: 56, 
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColor,
-                ),
+                  color: Theme.of(context).primaryColor
+                )
               ),
               const SizedBox(height: 40),
               Stack(
@@ -82,23 +82,20 @@ class QiblaCompass extends StatelessWidget {
                       color: Theme.of(context).cardTheme.color ?? Colors.white,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 30,
                           spreadRadius: 5,
-                        ),
+                        )
                       ],
                     ),
                   ),
-                  // Compass Ticks
+                   // Compass Ticks
                   Container(
                     width: 300,
                     height: 300,
-                    decoration: BoxDecoration(
+                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.grey.withOpacity(0.2),
-                        width: 2,
-                      ),
+                      border: Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 2),
                     ),
                   ),
                   // Needle
@@ -107,27 +104,17 @@ class QiblaCompass extends StatelessWidget {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Custom Compass Art
-                        Icon(
-                          Icons.compass_calibration_outlined,
-                          size: 280,
-                          color: Colors.grey.withOpacity(0.2),
-                        ),
-
-                        // The Needle
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.navigation,
-                              size: 60,
-                              color: Theme.of(context).primaryColor,
-                            ),
-                            const SizedBox(
-                              height: 60,
-                            ), // Offset to center the rotation point roughly
-                          ],
-                        ),
+                         // Custom Compass Art
+                         Icon(Icons.compass_calibration_outlined, size: 280, color: Colors.grey.withValues(alpha: 0.2)),
+                         
+                         // The Needle
+                         Column(
+                           mainAxisSize: MainAxisSize.min,
+                           children: [
+                             Icon(Icons.navigation, size: 60, color: Theme.of(context).primaryColor),
+                             const SizedBox(height: 60), // Offset to center the rotation point roughly
+                           ],
+                         )
                       ],
                     ),
                   ),
@@ -135,30 +122,13 @@ class QiblaCompass extends StatelessWidget {
               ),
               const SizedBox(height: 40),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.info_outline, size: 20),
-                    const SizedBox(width: 10),
-                    Text(
-                      "Pastikan GPS aktif & kalibrasi kompas",
-                      style: GoogleFonts.poppins(fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
+                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                 decoration: BoxDecoration(
+                   color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                   borderRadius: BorderRadius.circular(30),
+                 ),
+                 child: Row(
+                   mainAxisSize: MainAxisSize.min,
+                   children: [
+                     const Icon(Icons.info_outline, size: 20),
+

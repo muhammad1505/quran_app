@@ -56,7 +56,7 @@ class QuranPage extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: Theme.of(
                                 context,
-                              ).primaryColor.withOpacity(0.1),
+                              ).primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
@@ -216,7 +216,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
               gradient: LinearGradient(
                 colors: [
                   Theme.of(context).primaryColor,
-                  Theme.of(context).primaryColor.withOpacity(0.8),
+                  Theme.of(context).primaryColor.withValues(alpha: 0.8),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -224,7 +224,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
             ),
             child: Center(
               child: Text(
-                quran.getBasmala(),
+                "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
                 style: GoogleFonts.amiri(fontSize: 24, color: Colors.white),
                 textAlign: TextAlign.center,
               ),
@@ -242,7 +242,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                   ),
                   decoration: BoxDecoration(
                     border: Border(
-                      bottom: BorderSide(color: Colors.grey.withOpacity(0.1)),
+                      bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
                     ),
                   ),
                   child: Column(
@@ -259,7 +259,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                             decoration: BoxDecoration(
                               color: Theme.of(
                                 context,
-                              ).primaryColor.withOpacity(0.1),
+                              ).primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
@@ -307,7 +307,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                         quran.getVerseTranslation(
                           widget.surahNumber,
                           verseNumber,
-                          translation: quran.Translation.idIndonesian,
+                          translation: quran.Translation.id,
                         ),
                         textAlign: TextAlign.left,
                         style: GoogleFonts.poppins(
