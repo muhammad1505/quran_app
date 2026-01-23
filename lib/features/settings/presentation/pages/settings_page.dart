@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:quran_app/core/settings/quran_settings.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -10,21 +12,35 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  String _selectedTranslation = 'id';
   String _selectedQari = 'alafasy'; // Default ID for Mishary Rashid Alafasy
   bool _enableNotifications = true;
   double _volume = 1.0;
+  final QuranSettingsController _quranSettings =
+      QuranSettingsController.instance;
 
   @override
   void initState() {
     super.initState();
+    _quranSettings.addListener(_onSettingsChanged);
     _loadSettings();
   }
 
+  @override
+  void dispose() {
+    _quranSettings.removeListener(_onSettingsChanged);
+    super.dispose();
+  }
+
+  void _onSettingsChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   Future<void> _loadSettings() async {
+    await _quranSettings.load();
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _selectedTranslation = prefs.getString('translation') ?? 'id';
       _selectedQari = prefs.getString('qari') ?? 'alafasy';
       _enableNotifications = prefs.getBool('notifications') ?? true;
       _volume = prefs.getDouble('volume') ?? 1.0;
@@ -60,14 +76,40 @@ class _SettingsPageState extends State<SettingsPage> {
           _buildSectionHeader("Al-Quran & Audio"),
           ListTile(
             title: const Text("Terjemahan"),
-            subtitle: Text(
-              _selectedTranslation == 'id'
-                  ? 'Bahasa Indonesia'
-                  : 'English (Saheeh)',
-            ),
+            subtitle: Text(_translationLabel(_quranSettings.value.translation)),
             leading: const Icon(Icons.translate),
             onTap: () {
               _showTranslationDialog();
+            },
+          ),
+          SwitchListTile(
+            title: const Text("Transliterasi (Latin)"),
+            subtitle: const Text("Tampilkan teks latin"),
+            value: _quranSettings.value.showLatin,
+            // ignore: deprecated_member_use
+            activeColor: Theme.of(context).primaryColor,
+            onChanged: (val) {
+              _quranSettings.setShowLatin(val);
+            },
+          ),
+          SwitchListTile(
+            title: const Text("Tajwid"),
+            subtitle: const Text("Tampilkan warna tajwid pada teks Arab"),
+            value: _quranSettings.value.showTajwid,
+            // ignore: deprecated_member_use
+            activeColor: Theme.of(context).primaryColor,
+            onChanged: (val) {
+              _quranSettings.setShowTajwid(val);
+            },
+          ),
+          SwitchListTile(
+            title: const Text("Terjemahan Per Kata"),
+            subtitle: const Text("Tampilkan arti per kata di bawah ayat"),
+            value: _quranSettings.value.showWordByWord,
+            // ignore: deprecated_member_use
+            activeColor: Theme.of(context).primaryColor,
+            onChanged: (val) {
+              _quranSettings.setShowWordByWord(val);
             },
           ),
           ListTile(
@@ -139,6 +181,15 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  String _translationLabel(TranslationLanguage language) {
+    switch (language) {
+      case TranslationLanguage.id:
+        return "Bahasa Indonesia";
+      case TranslationLanguage.en:
+        return "English (Abdel Haleem)";
+    }
+  }
+
   void _showTranslationDialog() {
     showDialog(
       context: context,
@@ -152,36 +203,38 @@ class _SettingsPageState extends State<SettingsPage> {
               leading: Radio<String>(
                 value: 'id',
                 // ignore: deprecated_member_use
-                groupValue: _selectedTranslation,
+                groupValue:
+                    _quranSettings.value.translation == TranslationLanguage.id
+                        ? 'id'
+                        : 'en',
                 // ignore: deprecated_member_use
                 onChanged: (val) {
-                  setState(() => _selectedTranslation = val.toString());
-                  _saveSetting('translation', val);
+                  _quranSettings.updateTranslation(TranslationLanguage.id);
                   Navigator.pop(ctx);
                 },
               ),
               onTap: () {
-                setState(() => _selectedTranslation = 'id');
-                _saveSetting('translation', 'id');
+                _quranSettings.updateTranslation(TranslationLanguage.id);
                 Navigator.pop(ctx);
               },
             ),
             ListTile(
-              title: const Text("English (Saheeh)"),
+              title: const Text("English (Abdel Haleem)"),
               leading: Radio<String>(
                 value: 'en',
                 // ignore: deprecated_member_use
-                groupValue: _selectedTranslation,
+                groupValue:
+                    _quranSettings.value.translation == TranslationLanguage.id
+                        ? 'id'
+                        : 'en',
                 // ignore: deprecated_member_use
                 onChanged: (val) {
-                  setState(() => _selectedTranslation = val.toString());
-                  _saveSetting('translation', val);
+                  _quranSettings.updateTranslation(TranslationLanguage.en);
                   Navigator.pop(ctx);
                 },
               ),
               onTap: () {
-                setState(() => _selectedTranslation = 'en');
-                _saveSetting('translation', 'en');
+                _quranSettings.updateTranslation(TranslationLanguage.en);
                 Navigator.pop(ctx);
               },
             ),
