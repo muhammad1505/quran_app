@@ -84,7 +84,6 @@ class _QiblaPageState extends State<QiblaPage> {
                       rotationSpeed: 200,
                       height: 300,
                       width: 300,
-                      isQiblaCompass: false,
                       compassBuilder: (context, snapshot, child) {
                         // Adjust rotation so Qibla (0 degrees in UI terms) points up
                         // If _qiblaDirection is e.g. 295, we want the needle to point to 295.
