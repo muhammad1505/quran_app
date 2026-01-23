@@ -206,6 +206,14 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
+          SwitchListTile(
+            title: const Text("Repeat Ayat"),
+            subtitle: const Text("Ulangi audio saat diputar"),
+            value: _audioSettings.value.repeatOne,
+            onChanged: (val) {
+              _audioSettings.updateRepeatOne(val);
+            },
+          ),
           const Divider(),
           _buildSectionHeader("Jadwal Sholat"),
           ListTile(

@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:alfurqan/alfurqan.dart';
 import 'package:alfurqan/constant.dart';
@@ -6,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:quran/quran.dart' as quran;
 import 'package:quran_app/core/services/audio_cache_service.dart';
 import 'package:quran_app/core/services/bookmark_service.dart';
@@ -14,6 +18,8 @@ import 'package:quran_app/core/services/translation_service.dart';
 import 'package:quran_app/core/services/word_by_word_service.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
+import 'package:quran_app/features/quran/presentation/pages/tafsir_page.dart';
+import 'package:share_plus/share_plus.dart';
 
 class QuranPage extends StatefulWidget {
   const QuranPage({super.key});
@@ -26,6 +32,7 @@ class _QuranPageState extends State<QuranPage> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   bool _showNotesOnly = false;
+  String? _selectedFolderId;
   final List<_JuzStart> _juzStarts = const [
     _JuzStart(1, 1),
     _JuzStart(2, 142),
@@ -235,16 +242,23 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Widget _buildBookmarkList(BuildContext context) {
-    return FutureBuilder<List<BookmarkItem>>(
-      future: BookmarkService.instance.getAll(),
+    return FutureBuilder<_BookmarkData>(
+      future: _loadBookmarkData(),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
         }
-        final items = snapshot.data ?? [];
+        final data = snapshot.data;
+        final items = data?.bookmarks ?? [];
+        final folders = data?.folders ?? [];
         final filtered = _showNotesOnly
             ? items.where((item) => (item.note ?? '').isNotEmpty).toList()
             : items;
+        final filteredByFolder = _selectedFolderId == null
+            ? filtered
+            : filtered
+                .where((item) => item.folderId == _selectedFolderId)
+                .toList();
         if (filtered.isEmpty) {
           return Center(
             child: Padding(
@@ -281,6 +295,11 @@ class _QuranPageState extends State<QuranPage> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const Spacer(),
+                TextButton.icon(
+                  onPressed: _showCreateFolderDialog,
+                  icon: const Icon(Icons.create_new_folder_outlined, size: 18),
+                  label: const Text('Folder'),
+                ),
                 SegmentedButton<bool>(
                   segments: const [
                     ButtonSegment(value: false, label: Text('Favorit')),
@@ -294,7 +313,34 @@ class _QuranPageState extends State<QuranPage> {
               ],
             ),
             const SizedBox(height: 12),
-            ...filtered.map((item) {
+            if (folders.isNotEmpty)
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: folders.length + 1,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return ChoiceChip(
+                        label: const Text('Semua'),
+                        selected: _selectedFolderId == null,
+                        onSelected: (_) =>
+                            setState(() => _selectedFolderId = null),
+                      );
+                    }
+                    final folder = folders[index - 1];
+                    return ChoiceChip(
+                      label: Text(folder.name),
+                      selected: _selectedFolderId == folder.id,
+                      onSelected: (_) =>
+                          setState(() => _selectedFolderId = folder.id),
+                    );
+                  },
+                ),
+              ),
+            if (folders.isNotEmpty) const SizedBox(height: 12),
+            ...filteredByFolder.map((item) {
               final surahName = quran.getSurahName(item.surah);
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -325,6 +371,17 @@ class _QuranPageState extends State<QuranPage> {
           ],
         );
       },
+    );
+  }
+
+  Future<_BookmarkData> _loadBookmarkData() async {
+    final results = await Future.wait([
+      BookmarkService.instance.getAll(),
+      BookmarkService.instance.getFolders(),
+    ]);
+    return _BookmarkData(
+      bookmarks: results[0] as List<BookmarkItem>,
+      folders: results[1] as List<BookmarkFolder>,
     );
   }
 }
@@ -403,6 +460,9 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   void _onAudioSettingsChanged() {
     _audioPlayer.setVolume(_audioSettings.value.volume);
     _audioPlayer.setSpeed(_audioSettings.value.playbackSpeed);
+    _audioPlayer.setLoopMode(
+      _audioSettings.value.repeatOne ? LoopMode.one : LoopMode.off,
+    );
     _refreshDownloadStatus();
     if (mounted) {
       setState(() {});
@@ -437,6 +497,9 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
           }
           _audioPlayer.setVolume(_audioSettings.value.volume);
           _audioPlayer.setSpeed(_audioSettings.value.playbackSpeed);
+          _audioPlayer.setLoopMode(
+            _audioSettings.value.repeatOne ? LoopMode.one : LoopMode.off,
+          );
           await _audioPlayer.play();
         } catch (e) {
           if (mounted) {
@@ -462,6 +525,9 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
       await _audioPlayer.setUrl(url);
       _audioPlayer.setVolume(_audioSettings.value.volume);
       _audioPlayer.setSpeed(_audioSettings.value.playbackSpeed);
+      _audioPlayer.setLoopMode(
+        _audioSettings.value.repeatOne ? LoopMode.one : LoopMode.off,
+      );
       await _audioPlayer.play();
     } catch (e) {
       if (mounted) {
@@ -1008,6 +1074,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
 
   Widget _buildMiniPlayer() {
     final speed = _audioSettings.value.playbackSpeed;
+    final repeatOn = _audioSettings.value.repeatOne;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -1030,6 +1097,19 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
               style: Theme.of(context).textTheme.bodyMedium,
               overflow: TextOverflow.ellipsis,
             ),
+          ),
+          IconButton(
+            onPressed: () {
+              final next = !_audioSettings.value.repeatOne;
+              _audioSettings.updateRepeatOne(next);
+              _audioPlayer.setLoopMode(next ? LoopMode.one : LoopMode.off);
+              setState(() {});
+            },
+            icon: Icon(
+              repeatOn ? Icons.repeat_one : Icons.repeat,
+              color: repeatOn ? Theme.of(context).primaryColor : null,
+            ),
+            tooltip: repeatOn ? 'Repeat ayat aktif' : 'Repeat ayat',
           ),
           PopupMenuButton<double>(
             onSelected: (value) {
@@ -1125,6 +1205,14 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.folder_outlined),
+                title: const Text('Simpan ke folder'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showFolderPicker(verseNumber);
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.copy_all),
                 title: const Text('Salin teks Arab'),
                 onTap: () async {
@@ -1173,8 +1261,11 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                 title: const Text('Bagikan ayat'),
                 onTap: () {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Bagikan segera hadir.')),
+                  _showShareDialog(
+                    verseNumber: verseNumber,
+                    arabic: arabic,
+                    translation: translation,
+                    transliteration: transliteration,
                   );
                 },
               ),
@@ -1183,8 +1274,17 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                 title: const Text('Tafsir ringkas'),
                 onTap: () {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Tafsir segera hadir.')),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TafsirPage(
+                        surahNumber: widget.surahNumber,
+                        verseNumber: verseNumber,
+                        arabic: arabic,
+                        translation: translation,
+                        transliteration: transliteration,
+                      ),
+                    ),
                   );
                 },
               ),
@@ -1242,6 +1342,243 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
         );
       },
     );
+  }
+
+  void _showCreateFolderDialog() {
+    final controller = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Buat Folder'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Contoh: Hafalan',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              if (name.isEmpty) return;
+              await BookmarkService.instance.addFolder(name);
+              if (context.mounted) {
+                Navigator.pop(context);
+                setState(() {});
+              }
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showFolderPicker(int verseNumber) async {
+    final folders = await BookmarkService.instance.getFolders();
+    if (!mounted) return;
+    if (!_isBookmarked(verseNumber)) {
+      await BookmarkService.instance.toggleBookmark(
+        surah: widget.surahNumber,
+        ayah: verseNumber,
+      );
+      await _loadBookmarks();
+    }
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Pilih Folder'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showCreateFolderDialog();
+                  },
+                ),
+              ),
+              ListTile(
+                title: const Text('Tanpa folder'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await BookmarkService.instance.assignFolder(
+                    surah: widget.surahNumber,
+                    ayah: verseNumber,
+                    folderId: null,
+                  );
+                  if (mounted) setState(() {});
+                },
+              ),
+              ...folders.map(
+                (folder) => ListTile(
+                  title: Text(folder.name),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await BookmarkService.instance.assignFolder(
+                      surah: widget.surahNumber,
+                      ayah: verseNumber,
+                      folderId: folder.id,
+                    );
+                    if (mounted) setState(() {});
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showShareDialog({
+    required int verseNumber,
+    required String arabic,
+    required String translation,
+    required String transliteration,
+  }) {
+    final boundaryKey = GlobalKey();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Bagikan Ayat'),
+          content: SingleChildScrollView(
+            child: RepaintBoundary(
+              key: boundaryKey,
+              child: _buildShareCard(
+                verseNumber: verseNumber,
+                arabic: arabic,
+                translation: translation,
+                transliteration: transliteration,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await _captureAndShare(
+                  boundaryKey,
+                  fileName:
+                      'ayah_${widget.surahNumber}_$verseNumber.png',
+                  subject:
+                      'Surah ${quran.getSurahName(widget.surahNumber)} ayat $verseNumber',
+                );
+              },
+              child: const Text('Bagikan'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildShareCard({
+    required int verseNumber,
+    required String arabic,
+    required String translation,
+    required String transliteration,
+  }) {
+    final theme = Theme.of(context);
+    final title =
+        'QS. ${quran.getSurahName(widget.surahNumber)} : $verseNumber';
+    return Container(
+      width: 320,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.primaryColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            arabic,
+            textAlign: TextAlign.right,
+            style: _arabicTextStyle(_quranSettings.value, theme).copyWith(
+              fontSize: 24,
+            ),
+          ),
+          if (transliteration.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              transliteration,
+              style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            translation,
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 16, color: theme.primaryColor),
+              const SizedBox(width: 6),
+              Text(
+                'Al-Qur\\'an Lengkap',
+                style: theme.textTheme.labelMedium,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _captureAndShare(
+    GlobalKey boundaryKey, {
+    required String fileName,
+    required String subject,
+  }) async {
+    try {
+      final boundary =
+          boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception('Gagal menangkap gambar.');
+      }
+      final image = await boundary.toImage(pixelRatio: 3);
+      final byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        throw Exception('Gagal mengonversi gambar.');
+      }
+      final pngBytes = byteData.buffer.asUint8List();
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(pngBytes);
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: subject,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal membagikan ayat: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -1406,13 +1743,12 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                           Row(
                             children: [
                               IconButton(
-                                onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Bagikan segera hadir.'),
-                                    ),
-                                  );
-                                },
+                                onPressed: () => _showShareDialog(
+                                  verseNumber: verseNumber,
+                                  arabic: verseText,
+                                  translation: translationText,
+                                  transliteration: transliterationText,
+                                ),
                                 icon: Icon(
                                   Icons.share_outlined,
                                   size: 20,
@@ -1491,4 +1827,11 @@ class _JuzStart {
   final int ayah;
 
   const _JuzStart(this.surah, this.ayah);
+}
+
+class _BookmarkData {
+  final List<BookmarkItem> bookmarks;
+  final List<BookmarkFolder> folders;
+
+  const _BookmarkData({required this.bookmarks, required this.folders});
 }

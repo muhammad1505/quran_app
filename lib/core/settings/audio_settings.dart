@@ -5,22 +5,26 @@ class AudioSettings {
   final String qariId;
   final double volume;
   final double playbackSpeed;
+  final bool repeatOne;
 
   const AudioSettings({
     this.qariId = 'alafasy',
     this.volume = 1.0,
     this.playbackSpeed = 1.0,
+    this.repeatOne = false,
   });
 
   AudioSettings copyWith({
     String? qariId,
     double? volume,
     double? playbackSpeed,
+    bool? repeatOne,
   }) {
     return AudioSettings(
       qariId: qariId ?? this.qariId,
       volume: volume ?? this.volume,
       playbackSpeed: playbackSpeed ?? this.playbackSpeed,
+      repeatOne: repeatOne ?? this.repeatOne,
     );
   }
 }
@@ -29,6 +33,7 @@ class AudioSettingsController extends ChangeNotifier {
   static const _qariKey = 'qari';
   static const _volumeKey = 'volume';
   static const _speedKey = 'audio_speed';
+  static const _repeatKey = 'audio_repeat_one';
   static const _allowedQariIds = {'alafasy', 'abdulbasit', 'basfar'};
 
   AudioSettingsController._();
@@ -45,6 +50,7 @@ class AudioSettingsController extends ChangeNotifier {
       qariId: _allowedQariIds.contains(storedQari) ? storedQari : 'alafasy',
       volume: prefs.getDouble(_volumeKey) ?? 1.0,
       playbackSpeed: prefs.getDouble(_speedKey) ?? 1.0,
+      repeatOne: prefs.getBool(_repeatKey) ?? false,
     );
     notifyListeners();
   }
@@ -68,5 +74,12 @@ class AudioSettingsController extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_speedKey, speed);
+  }
+
+  Future<void> updateRepeatOne(bool enabled) async {
+    _value = _value.copyWith(repeatOne: enabled);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_repeatKey, enabled);
   }
 }
