@@ -69,7 +69,6 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       final params = CalculationMethod.singapore.getParameters();
       params.madhab = Madhab.shafi;
       
-      final now = DateTime.now();
       final prayerTimes = PrayerTimes.today(myCoordinates, params);
       
       setState(() {

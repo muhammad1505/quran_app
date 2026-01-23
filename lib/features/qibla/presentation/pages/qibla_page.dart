@@ -68,7 +68,6 @@ class _QiblaPageState extends State<QiblaPage> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
     final goldColor = const Color(0xFFD4AF37);
 
     return Scaffold(
