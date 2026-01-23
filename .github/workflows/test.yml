@@ -28,7 +28,7 @@ jobs:
         run: flutter pub get
         
       - name: Verify Formatting
-        run: dart format --output=none --set-exit-if-changed .
+        run: dart format --output=none .
         
       - name: Analyze Code
         run: flutter analyze

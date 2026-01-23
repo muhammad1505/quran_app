@@ -156,10 +156,11 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
           await _audioPlayer.setUrl(url);
           await _audioPlayer.play();
         } catch (e) {
-          if (mounted)
+          if (mounted) {
             ScaffoldMessenger.of(
               context,
             ).showSnackBar(SnackBar(content: Text("Error: $e")));
+          }
         }
       } else {
         await _audioPlayer.play();
