@@ -49,7 +49,7 @@ class QiblaCompass extends StatelessWidget {
           );
         }
 
-        final qiblaDirection = snapshot.data as QiblaDirection;
+        final qiblaDirection = snapshot.data as QiblahDirection;
         final direction = qiblaDirection.qiblah;
 
         return Center(
