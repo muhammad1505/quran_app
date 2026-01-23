@@ -452,6 +452,10 @@ class _PrayerIllustrationPainter extends CustomPainter {
       case PrayerIllustrationType.sitting:
         _drawSitting(canvas, size, paint);
         break;
+      case PrayerIllustrationType.tasyahud:
+      case PrayerIllustrationType.salam:
+        _drawSitting(canvas, size, paint);
+        break;
       case PrayerIllustrationType.none:
         break;
     }
