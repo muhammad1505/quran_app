@@ -59,7 +59,9 @@ class _CustomLoadingWidgetState extends State<CustomLoadingWidget>
                     height: 80,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                      color: Theme.of(
+                        context,
+                      ).primaryColor.withValues(alpha: 0.2),
                     ),
                   ),
                 ),

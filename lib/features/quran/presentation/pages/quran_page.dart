@@ -242,7 +242,9 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                   ),
                   decoration: BoxDecoration(
                     border: Border(
-                      bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+                      bottom: BorderSide(
+                        color: Colors.grey.withValues(alpha: 0.1),
+                      ),
                     ),
                   ),
                   child: Column(
