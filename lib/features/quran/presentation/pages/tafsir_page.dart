@@ -127,7 +127,6 @@ class _TafsirSection extends StatelessWidget {
           color: Theme.of(context).textTheme.bodyLarge?.color,
         );
       case ArabicFontFamily.amiri:
-      default:
         return GoogleFonts.amiri(
           fontSize: settings.arabicFontSize,
           color: Theme.of(context).textTheme.bodyLarge?.color,

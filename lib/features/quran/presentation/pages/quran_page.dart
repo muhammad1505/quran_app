@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:alfurqan/alfurqan.dart';
 import 'package:alfurqan/constant.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
@@ -371,6 +372,40 @@ class _QuranPageState extends State<QuranPage> {
           ],
         );
       },
+    );
+  }
+
+  void _showCreateFolderDialog() {
+    final controller = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Buat Folder'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Contoh: Hafalan',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              if (name.isEmpty) return;
+              await BookmarkService.instance.addFolder(name);
+              if (context.mounted) {
+                Navigator.pop(context);
+                setState(() {});
+              }
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
     );
   }
 
