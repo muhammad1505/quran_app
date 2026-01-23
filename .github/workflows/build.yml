@@ -42,9 +42,21 @@ jobs:
           
           # Just simply look for it in the standard cache location if the grep fails or to be sure
           # We use a wildcard for version to be safe
+          # 1. Patch namespace
           find $PUB_CACHE/hosted/pub.dev/flutter_qiblah* -name "build.gradle" -exec sed -i 's/android {/android {\n    namespace "ml.medyas.flutter_qiblah"/g' {} +
           
-          echo "Patched flutter_qiblah build.gradle namespace"
+          # 2. Patch JVM Compatibility (Force Java 17 for both Java and Kotlin)
+          # We append compileOptions and kotlinOptions inside the android block
+          find $PUB_CACHE/hosted/pub.dev/flutter_qiblah* -name "build.gradle" -exec sed -i '/android {/a \
+              compileOptions {\n\
+                  sourceCompatibility JavaVersion.VERSION_17\n\
+                  targetCompatibility JavaVersion.VERSION_17\n\
+              }\n\
+              kotlinOptions {\n\
+                  jvmTarget = "17"\n\
+              }' {} +
+
+          echo "Patched flutter_qiblah build.gradle: Added namespace & Forced JVM 17"
 
       - name: Build APK (Release)
         run: flutter build apk --release --split-per-abi
