@@ -3,12 +3,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 enum TranslationLanguage { id, en }
 
-enum TranslationSource { idKemenag, enAbdelHaleem, enSaheeh }
+enum TranslationSource {
+  idKemenag,
+  idKingFahad,
+  idSabiq,
+  enAbdelHaleem,
+  enSaheeh,
+}
 
 extension TranslationSourceExtension on TranslationSource {
   TranslationLanguage get language {
     switch (this) {
       case TranslationSource.idKemenag:
+      case TranslationSource.idKingFahad:
+      case TranslationSource.idSabiq:
         return TranslationLanguage.id;
       case TranslationSource.enAbdelHaleem:
       case TranslationSource.enSaheeh:
@@ -20,6 +28,10 @@ extension TranslationSourceExtension on TranslationSource {
     switch (this) {
       case TranslationSource.idKemenag:
         return 'Bahasa Indonesia (Kemenag RI)';
+      case TranslationSource.idKingFahad:
+        return 'Bahasa Indonesia (King Fahad Quran Complex)';
+      case TranslationSource.idSabiq:
+        return 'Bahasa Indonesia (The Sabiq Company)';
       case TranslationSource.enAbdelHaleem:
         return 'English (Abdel Haleem)';
       case TranslationSource.enSaheeh:

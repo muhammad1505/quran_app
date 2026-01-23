@@ -86,11 +86,46 @@ class AudioCacheService {
     }
   }
 
+  Future<Set<int>> listDownloadedSurahs(String qariId) async {
+    final dir = await _qariDir(qariId);
+    if (!dir.existsSync()) {
+      return {};
+    }
+    final results = <int>{};
+    for (final entity in dir.listSync()) {
+      if (entity is File && entity.path.endsWith('.mp3')) {
+        final name = entity.uri.pathSegments.last;
+        final match = RegExp(r'surah_(\\d{3})\\.mp3').firstMatch(name);
+        if (match != null) {
+          final number = int.tryParse(match.group(1) ?? '');
+          if (number != null) {
+            results.add(number);
+          }
+        }
+      }
+    }
+    return results;
+  }
+
+  Future<void> deleteAllForQari(String qariId) async {
+    final dir = await _qariDir(qariId);
+    if (!dir.existsSync()) {
+      return;
+    }
+    await dir.delete(recursive: true);
+  }
+
   Future<File> _surahFile(int surahNumber, String qariId) async {
     final dir = await getApplicationDocumentsDirectory();
     final qari = qariById(qariId);
     final path =
         '${dir.path}/audio/${qari.audioSlug}/surah_${surahNumber.toString().padLeft(3, '0')}.mp3';
     return File(path);
+  }
+
+  Future<Directory> _qariDir(String qariId) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final qari = qariById(qariId);
+    return Directory('${dir.path}/audio/${qari.audioSlug}');
   }
 }

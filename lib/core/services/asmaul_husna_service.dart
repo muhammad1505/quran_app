@@ -6,12 +6,14 @@ class AsmaulHusnaItem {
   final int number;
   final String arabic;
   final String transliteration;
+  final String meaningId;
   final String meaningEn;
 
   const AsmaulHusnaItem({
     required this.number,
     required this.arabic,
     required this.transliteration,
+    required this.meaningId,
     required this.meaningEn,
   });
 }
@@ -36,6 +38,7 @@ class AsmaulHusnaService {
               number: item['number'] as int? ?? 0,
               arabic: item['arabic'] as String? ?? '',
               transliteration: item['transliteration'] as String? ?? '',
+              meaningId: item['meaning_id'] as String? ?? '',
               meaningEn: item['meaning_en'] as String? ?? '',
             ))
         .toList();

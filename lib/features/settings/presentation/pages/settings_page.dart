@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/settings/prayer_settings.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
+import 'package:quran_app/features/quran/presentation/pages/murotal_download_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -128,6 +129,17 @@ class _SettingsPageState extends State<SettingsPage> {
               _showQariDialog();
             },
           ),
+          ListTile(
+            title: const Text("Murotal Offline"),
+            subtitle: const Text("Kelola unduhan audio per surah"),
+            leading: const Icon(Icons.cloud_download_outlined),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MurotalDownloadPage()),
+              );
+            },
+          ),
           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -226,6 +238,41 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               onTap: () {
                 _quranSettings.updateTranslation(TranslationSource.idKemenag);
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              title: Text(TranslationSource.idKingFahad.label),
+              leading: Radio<String>(
+                value: TranslationSource.idKingFahad.name,
+                // ignore: deprecated_member_use
+                groupValue: _quranSettings.value.translation.name,
+                // ignore: deprecated_member_use
+                onChanged: (val) {
+                  _quranSettings
+                      .updateTranslation(TranslationSource.idKingFahad);
+                  Navigator.pop(ctx);
+                },
+              ),
+              onTap: () {
+                _quranSettings.updateTranslation(TranslationSource.idKingFahad);
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              title: Text(TranslationSource.idSabiq.label),
+              leading: Radio<String>(
+                value: TranslationSource.idSabiq.name,
+                // ignore: deprecated_member_use
+                groupValue: _quranSettings.value.translation.name,
+                // ignore: deprecated_member_use
+                onChanged: (val) {
+                  _quranSettings.updateTranslation(TranslationSource.idSabiq);
+                  Navigator.pop(ctx);
+                },
+              ),
+              onTap: () {
+                _quranSettings.updateTranslation(TranslationSource.idSabiq);
                 Navigator.pop(ctx);
               },
             ),

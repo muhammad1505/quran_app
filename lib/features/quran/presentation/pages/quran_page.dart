@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:quran/quran.dart' as quran;
 import 'package:quran_app/core/services/audio_cache_service.dart';
+import 'package:quran_app/core/services/translation_service.dart';
 import 'package:quran_app/core/services/word_by_word_service.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
@@ -133,6 +134,9 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   bool _isLoading = false;
   bool _isDownloading = false;
   bool _isDownloaded = false;
+  bool _isTranslationLoading = false;
+  Map<String, String>? _customTranslationMap;
+  TranslationSource? _customTranslationSource;
   final QuranSettingsController _quranSettings =
       QuranSettingsController.instance;
   final AudioSettingsController _audioSettings =
@@ -155,6 +159,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     _quranSettings.load();
     _audioSettings.load();
     _refreshDownloadStatus();
+    _maybeLoadCustomTranslation();
   }
 
   @override
@@ -166,6 +171,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   }
 
   void _onSettingsChanged() {
+    _maybeLoadCustomTranslation();
     if (mounted) {
       setState(() {});
     }
@@ -217,6 +223,8 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   TranslationType _translationType(TranslationSource source) {
     switch (source) {
       case TranslationSource.idKemenag:
+      case TranslationSource.idKingFahad:
+      case TranslationSource.idSabiq:
         return TranslationType.idIndonesianIslamicAffairsMinistry;
       case TranslationSource.enAbdelHaleem:
         return TranslationType.enMASAbdelHaleem;
@@ -387,6 +395,29 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     }
   }
 
+  Future<void> _maybeLoadCustomTranslation() async {
+    final source = _quranSettings.value.translation;
+    final needsAsset = TranslationAssetService.instance.requiresAsset(source);
+    if (!needsAsset) {
+      _customTranslationMap = null;
+      _customTranslationSource = null;
+      _isTranslationLoading = false;
+      return;
+    }
+    if (_customTranslationSource == source && _customTranslationMap != null) {
+      return;
+    }
+    setState(() => _isTranslationLoading = true);
+    final map = await TranslationAssetService.instance.load(source);
+    if (mounted) {
+      setState(() {
+        _customTranslationMap = map;
+        _customTranslationSource = source;
+        _isTranslationLoading = false;
+      });
+    }
+  }
+
   Future<void> _toggleDownload() async {
     if (_isDownloading) return;
     setState(() => _isDownloading = true);
@@ -467,6 +498,17 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   Widget build(BuildContext context) {
     final int verseCount = quran.getVerseCount(widget.surahNumber);
     final settings = _quranSettings.value;
+    final needsCustomTranslation =
+        TranslationAssetService.instance.requiresAsset(settings.translation);
+    if (needsCustomTranslation &&
+        (_customTranslationMap == null || _isTranslationLoading)) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(quran.getSurahName(widget.surahNumber)),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: Column(
@@ -554,18 +596,19 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                       ? VerseMode.uthmaniTajweed
                       : VerseMode.uthmani,
                 ).text;
-                final translationText = _sanitizeTranslation(
-                  settings.translation == TranslationSource.enSaheeh
-                      ? quran.getVerseTranslation(
-                          widget.surahNumber,
-                          verseNumber,
-                          translation: quran.Translation.enSaheeh,
-                        )
-                      : AlQuran.translation(
-                          _translationType(settings.translation),
-                          verseKey,
-                        ).text,
-                );
+                final rawTranslation = needsCustomTranslation
+                    ? (_customTranslationMap?[verseKey] ?? '')
+                    : settings.translation == TranslationSource.enSaheeh
+                        ? quran.getVerseTranslation(
+                            widget.surahNumber,
+                            verseNumber,
+                            translation: quran.Translation.enSaheeh,
+                          )
+                        : AlQuran.translation(
+                            _translationType(settings.translation),
+                            verseKey,
+                          ).text;
+                final translationText = _sanitizeTranslation(rawTranslation);
                 final transliterationText = settings.showLatin
                     ? _decodeHtml(AlQuran.transliteration(verseKey).text)
                     : '';
