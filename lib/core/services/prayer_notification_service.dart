@@ -19,8 +19,8 @@ class PrayerNotificationService {
     if (_initialized) return;
     tz.initializeTimeZones();
     try {
-      final timezoneName = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(timezoneName));
+      final timezoneInfo = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timezoneInfo.identifier));
     } catch (_) {
       tz.setLocalLocation(tz.getLocation('UTC'));
     }
