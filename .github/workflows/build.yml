@@ -28,7 +28,57 @@ jobs:
       - name: Scaffold Android
         run: flutter create . --platforms android
 
-      # Note: We removed legacy plugins (flutter_qiblah, sensors), so no patching needed anymore!
+      - name: Inject Android Configuration (Desugaring, MultiDex, Permissions)
+        run: |
+          # 1. Inject Permissions & App Name into AndroidManifest.xml
+          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST_FILE" ]; then
+            # Add permissions before <application>
+            sed -i '/<application/i \
+            <uses-permission android:name="android.permission.INTERNET"/>\
+            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\
+            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\
+            <uses-permission android:name="android.permission.VIBRATE" />\
+            <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\
+            <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />' "$MANIFEST_FILE"
+            
+            # Change Label
+            sed -i 's/android:label="quran_app"/android:label="Al-Quran Terjemahan"/g' "$MANIFEST_FILE"
+            echo "✅ AndroidManifest.xml patched."
+          fi
+
+          # 2. Inject Desugaring & MultiDex into build.gradle (Groovy or Kotlin DSL)
+          GRADLE_FILE="android/app/build.gradle"
+          KTS_FILE="android/app/build.gradle.kts"
+          
+          if [ -f "$KTS_FILE" ]; then
+            echo "Detected Kotlin DSL ($KTS_FILE)"
+            # Kotlin DSL Injection
+            # Add MultiDex to defaultConfig
+            sed -i '/defaultConfig {/a \        multiDexEnabled = true' "$KTS_FILE"
+            
+            # Add Compile Options
+            sed -i '/compileOptions {/a \        isCoreLibraryDesugaringEnabled = true' "$KTS_FILE"
+            
+            # Add Dependencies
+            sed -i '/dependencies {/a \    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")' "$KTS_FILE"
+            
+          elif [ -f "$GRADLE_FILE" ]; then
+            echo "Detected Groovy DSL ($GRADLE_FILE)"
+            # Groovy DSL Injection
+            # Add MultiDex
+            sed -i '/defaultConfig {/a \        multiDexEnabled true' "$GRADLE_FILE"
+            
+            # Add Compile Options
+            sed -i '/compileOptions {/a \        coreLibraryDesugaringEnabled true' "$GRADLE_FILE"
+            
+            # Add Dependencies
+            sed -i '/dependencies {/a \    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.3"' "$GRADLE_FILE"
+          else
+             echo "❌ No build.gradle found!"
+             exit 1
+          fi
+          echo "✅ build.gradle configuration injected."
 
       - name: Build APK (Release)
         run: flutter build apk --release --split-per-abi
