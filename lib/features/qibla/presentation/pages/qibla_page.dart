@@ -1,164 +1,148 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_qiblah/flutter_qiblah.dart';
-import 'dart:math' as math;
+import 'package:smooth_compass/utils/src/compass_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:adhan/adhan.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-class QiblaPage extends StatelessWidget {
+class QiblaPage extends StatefulWidget {
   const QiblaPage({super.key});
+
+  @override
+  State<QiblaPage> createState() => _QiblaPageState();
+}
+
+class _QiblaPageState extends State<QiblaPage> {
+  double? _qiblaDirection;
+  bool _hasPermission = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPermissionAndCalculateQibla();
+  }
+
+  Future<void> _checkPermissionAndCalculateQibla() async {
+    final status = await Permission.locationWhenInUse.request();
+    if (status.isGranted) {
+      setState(() => _hasPermission = true);
+      final position = await Geolocator.getCurrentPosition();
+      final coordinates = Coordinates(position.latitude, position.longitude);
+      final qibla = Qibla(coordinates);
+      setState(() {
+        _qiblaDirection = qibla.direction;
+      });
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Izin lokasi diperlukan untuk arah kiblat'),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Arah Kiblat")),
-      body: FutureBuilder(
-        future: FlutterQiblah.androidDeviceSensorSupport(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          }
-
-          if (snapshot.data == true) {
-            return const QiblaCompass();
-          } else {
-            return const Center(
-              child: Text("Perangkat ini tidak mendukung sensor arah kiblat."),
-            );
-          }
-        },
-      ),
-    );
-  }
-}
-
-class QiblaCompass extends StatelessWidget {
-  const QiblaCompass({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: FlutterQiblah.qiblahStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
-            child: CircularProgressIndicator(
-              color: Theme.of(context).primaryColor,
-            ),
-          );
-        }
-
-        final qiblaDirection = snapshot.data as QiblahDirection;
-        final direction = qiblaDirection.qiblah;
-
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "Arah Ka'bah",
-                style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey),
+      body: !_hasPermission
+          ? Center(
+              child: ElevatedButton(
+                onPressed: _checkPermissionAndCalculateQibla,
+                child: const Text('Izinkan Lokasi'),
               ),
-              const SizedBox(height: 10),
-              Text(
-                "${direction.toStringAsFixed(1)}°",
-                style: GoogleFonts.poppins(
-                  fontSize: 56,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColor,
-                ),
-              ),
-              const SizedBox(height: 40),
-              Stack(
-                alignment: Alignment.center,
+            )
+          : _qiblaDirection == null
+          ? const Center(child: CircularProgressIndicator())
+          : Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Compass background
-                  Container(
-                    width: 320,
-                    height: 320,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Theme.of(context).cardTheme.color ?? Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 30,
-                          spreadRadius: 5,
-                        ),
-                      ],
+                  Text(
+                    "Arah Ka'bah",
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      color: Colors.grey,
                     ),
                   ),
-                  // Compass Ticks
-                  Container(
-                    width: 300,
+                  const SizedBox(height: 10),
+                  Text(
+                    "${_qiblaDirection!.toStringAsFixed(1)}°",
+                    style: GoogleFonts.poppins(
+                      fontSize: 56,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  SizedBox(
                     height: 300,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.grey.withValues(alpha: 0.2),
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                  // Needle
-                  Transform.rotate(
-                    angle: (direction * (math.pi / 180) * -1),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Custom Compass Art
-                        Icon(
-                          Icons.compass_calibration_outlined,
-                          size: 280,
-                          color: Colors.grey.withValues(alpha: 0.2),
-                        ),
+                    width: 300,
+                    child: SmoothCompass(
+                      rotationSpeed: 200,
+                      height: 300,
+                      width: 300,
+                      isQiblaCompass: false,
+                      compassBuilder: (context, snapshot, child) {
+                        // Adjust rotation so Qibla (0 degrees in UI terms) points up
+                        // If _qiblaDirection is e.g. 295, we want the needle to point to 295.
+                        // snapshot.data is the device heading.
 
-                        // The Needle
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.navigation,
-                              size: 60,
-                              color: Theme.of(context).primaryColor,
-                            ),
-                            const SizedBox(
-                              height: 60,
-                            ), // Offset to center the rotation point roughly
-                          ],
-                        ),
-                      ],
+                        // Simple Compass Logic:
+                        // Needle should rotate to: Qibla Direction - Device Heading
+                        return AnimatedRotation(
+                          duration: const Duration(milliseconds: 200),
+                          turns:
+                              (_qiblaDirection! -
+                                  (snapshot?.data?.angle ?? 0)) /
+                              360,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Compass Background
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Theme.of(context).cardTheme.color,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                      blurRadius: 30,
+                                      spreadRadius: 5,
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.compass_calibration_outlined,
+                                  size: 280,
+                                  color: Colors.grey.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              // Qibla Needle
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 50,
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                  const SizedBox(height: 100),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 40),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.info_outline, size: 20),
-                    const SizedBox(width: 10),
-                    Text(
-                      "Pastikan GPS aktif & kalibrasi kompas",
-                      style: GoogleFonts.poppins(fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+            ),
     );
   }
 }
