@@ -151,7 +151,9 @@ class _SettingsPageState extends State<SettingsPage> {
               title: const Text("Bahasa Indonesia"),
               leading: Radio<String>(
                 value: 'id',
+                // ignore: deprecated_member_use
                 groupValue: _selectedTranslation,
+                // ignore: deprecated_member_use
                 onChanged: (val) {
                   setState(() => _selectedTranslation = val.toString());
                   _saveSetting('translation', val);
@@ -168,7 +170,9 @@ class _SettingsPageState extends State<SettingsPage> {
               title: const Text("English (Saheeh)"),
               leading: Radio<String>(
                 value: 'en',
+                // ignore: deprecated_member_use
                 groupValue: _selectedTranslation,
+                // ignore: deprecated_member_use
                 onChanged: (val) {
                   setState(() => _selectedTranslation = val.toString());
                   _saveSetting('translation', val);
@@ -209,7 +213,9 @@ class _SettingsPageState extends State<SettingsPage> {
       title: Text(name),
       leading: Radio<String>(
         value: id,
+        // ignore: deprecated_member_use
         groupValue: _selectedQari,
+        // ignore: deprecated_member_use
         onChanged: (val) {
           setState(() => _selectedQari = val.toString());
           _saveSetting('qari', val);
