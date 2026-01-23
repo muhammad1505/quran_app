@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,6 +21,8 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _enableNotifications = true;
+  bool _manualLocationEnabled = false;
+  String? _manualLocationName;
   final QuranSettingsController _quranSettings =
       QuranSettingsController.instance;
   final AudioSettingsController _audioSettings =
@@ -57,6 +60,9 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _enableNotifications = prefs.getBool('notifications') ?? true;
+      _manualLocationEnabled =
+          prefs.getBool('manual_location_enabled') ?? false;
+      _manualLocationName = prefs.getString('manual_location_name');
     });
   }
 
@@ -86,6 +92,20 @@ class _SettingsPageState extends State<SettingsPage> {
               unawaited(_syncPrayerNotifications(val));
             },
           ),
+          ListTile(
+            title: const Text("Test Notifikasi"),
+            subtitle: const Text("Kirim notifikasi uji dalam 5 detik"),
+            leading: const Icon(Icons.notifications_active),
+            onTap: () {
+              unawaited(PrayerNotificationService.instance
+                  .scheduleTestNotification());
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Test notifikasi dijadwalkan."),
+                ),
+              );
+            },
+          ),
           const Divider(),
           _buildSectionHeader("Al-Quran & Audio"),
           ListTile(
@@ -95,6 +115,18 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () {
               _showTranslationDialog();
             },
+          ),
+          ListTile(
+            title: const Text("Ukuran Teks"),
+            subtitle: const Text("Arab & terjemahan"),
+            leading: const Icon(Icons.text_fields),
+            onTap: _showTextSizeSheet,
+          ),
+          ListTile(
+            title: const Text("Font Arab"),
+            subtitle: Text(_quranSettings.value.arabicFontFamily.label),
+            leading: const Icon(Icons.font_download_outlined),
+            onTap: _showArabicFontSheet,
           ),
           SwitchListTile(
             title: const Text("Transliterasi (Latin)"),
@@ -135,6 +167,13 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
           ListTile(
+            title: const Text("Kecepatan Audio"),
+            subtitle:
+                Text("${_audioSettings.value.playbackSpeed.toStringAsFixed(2)}x"),
+            leading: const Icon(Icons.speed),
+            onTap: _showAudioSpeedSheet,
+          ),
+          ListTile(
             title: const Text("Murotal Offline"),
             subtitle: const Text("Kelola unduhan audio per surah"),
             leading: const Icon(Icons.cloud_download_outlined),
@@ -169,6 +208,16 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const Divider(),
           _buildSectionHeader("Jadwal Sholat"),
+          ListTile(
+            title: const Text("Lokasi"),
+            subtitle: Text(
+              _manualLocationEnabled && _manualLocationName != null
+                  ? _manualLocationName!
+                  : "Otomatis (GPS)",
+            ),
+            leading: const Icon(Icons.location_on_outlined),
+            onTap: _showManualLocationDialog,
+          ),
           ListTile(
             title: const Text("Metode Perhitungan"),
             subtitle: Text(prayerMethodLabel(_prayerSettings.value.method)),
@@ -336,6 +385,210 @@ class _SettingsPageState extends State<SettingsPage> {
             _buildQariItem('basfar', "Abdullah Basfar"),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showTextSizeSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Ukuran Teks',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                _buildSlider(
+                  label: 'Ukuran Arab',
+                  value: _quranSettings.value.arabicFontSize,
+                  min: 26,
+                  max: 38,
+                  onChanged: (value) =>
+                      _quranSettings.setArabicFontSize(value),
+                ),
+                _buildSlider(
+                  label: 'Ukuran Terjemahan',
+                  value: _quranSettings.value.translationFontSize,
+                  min: 12,
+                  max: 20,
+                  onChanged: (value) =>
+                      _quranSettings.setTranslationFontSize(value),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showArabicFontSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Pilih Font Arab'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+              ...ArabicFontFamily.values.map(
+                (font) => RadioListTile<ArabicFontFamily>(
+                  title: Text(font.label),
+                  value: font,
+                  groupValue: _quranSettings.value.arabicFontFamily,
+                  onChanged: (value) {
+                    if (value != null) {
+                      _quranSettings.setArabicFontFamily(value);
+                      Navigator.pop(context);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAudioSpeedSheet() {
+    const speeds = [0.75, 1.0, 1.25, 1.5];
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Kecepatan Audio'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+              ...speeds.map(
+                (speed) => RadioListTile<double>(
+                  title: Text('${speed.toStringAsFixed(2)}x'),
+                  value: speed,
+                  groupValue: _audioSettings.value.playbackSpeed,
+                  onChanged: (value) {
+                    if (value != null) {
+                      _audioSettings.updatePlaybackSpeed(value);
+                      Navigator.pop(context);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showManualLocationDialog() {
+    final controller =
+        TextEditingController(text: _manualLocationName ?? '');
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Lokasi Manual'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Contoh: Yogyakarta',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('manual_location_enabled', false);
+              if (!mounted) return;
+              setState(() {
+                _manualLocationEnabled = false;
+                _manualLocationName = null;
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('Gunakan Otomatis'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final input = controller.text.trim();
+              if (input.isEmpty) return;
+              try {
+                final locations = await locationFromAddress(input);
+                if (locations.isEmpty) throw Exception('Lokasi tidak ditemukan');
+                final location = locations.first;
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool('manual_location_enabled', true);
+                await prefs.setString('manual_location_name', input);
+                await prefs.setDouble('last_lat', location.latitude);
+                await prefs.setDouble('last_lng', location.longitude);
+                if (!mounted) return;
+                setState(() {
+                  _manualLocationEnabled = true;
+                  _manualLocationName = input;
+                });
+                Navigator.pop(context);
+              } catch (_) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Gagal menemukan lokasi.')),
+                );
+              }
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSlider({
+    required String label,
+    required double value,
+    required double min,
+    required double max,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(label),
+              const Spacer(),
+              Text(value.toStringAsFixed(0)),
+            ],
+          ),
+          Slider(
+            value: value.clamp(min, max),
+            min: min,
+            max: max,
+            onChanged: onChanged,
+          ),
+        ],
       ),
     );
   }

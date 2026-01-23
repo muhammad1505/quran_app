@@ -51,6 +51,31 @@ class PrayerNotificationService {
     await _notifications.cancelAll();
   }
 
+  Future<void> scheduleTestNotification() async {
+    await initialize();
+    await requestPermissions();
+    final scheduled =
+        tz.TZDateTime.from(DateTime.now().add(const Duration(seconds: 5)), tz.local);
+    const androidDetails = AndroidNotificationDetails(
+      'prayer_test',
+      'Test Notifikasi',
+      channelDescription: 'Uji notifikasi adzan',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const details = NotificationDetails(android: androidDetails);
+    await _notifications.zonedSchedule(
+      2998,
+      'Test Notifikasi Adzan',
+      'Jika kamu melihat ini, notifikasi berhasil.',
+      scheduled,
+      details,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+
   Future<void> schedulePrayerTimes(
     PrayerTimes today,
     PrayerTimes tomorrow,

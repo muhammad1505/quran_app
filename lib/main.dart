@@ -2,12 +2,19 @@ import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'features/quran/presentation/pages/quran_page.dart';
 import 'features/prayer_times/presentation/pages/prayer_times_page.dart';
+import 'features/prayer_times/presentation/widgets/prayer_times_summary_card.dart';
 import 'features/qibla/presentation/pages/qibla_page.dart';
 import 'features/doa/presentation/pages/doa_page.dart';
 import 'features/prayer_guide/presentation/pages/prayer_guide_page.dart';
 import 'features/settings/presentation/pages/settings_page.dart';
 import 'features/asmaul_husna/presentation/pages/asmaul_husna_page.dart';
+import 'features/sholat/presentation/pages/sholat_page.dart';
+import 'features/more/presentation/pages/more_page.dart';
 import 'core/services/prayer_notification_service.dart';
+import 'core/services/last_read_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'features/onboarding/presentation/pages/onboarding_welcome_page.dart';
+import 'package:quran/quran.dart' as quran;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,14 +49,21 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-        );
-      }
-    });
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    await Future.delayed(const Duration(seconds: 2));
+    final prefs = await SharedPreferences.getInstance();
+    final finished = prefs.getBool('onboarding_done') ?? false;
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            finished ? const DashboardScreen() : const OnboardingWelcomePage(),
+      ),
+    );
   }
 
   @override
@@ -75,10 +89,12 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [
-    const HomePage(),
-    const QuranPage(),
-    const SettingsPage(),
+  final List<Widget> _pages = const [
+    HomePage(),
+    QuranPage(),
+    SholatPage(),
+    DoaPage(),
+    MorePage(),
   ];
 
   void _onItemTapped(int index) {
@@ -109,9 +125,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             label: 'Al-Quran',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Pengaturan',
+            icon: Icon(Icons.access_time_outlined),
+            selectedIcon: Icon(Icons.access_time),
+            label: 'Sholat',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.volunteer_activism_outlined),
+            selectedIcon: Icon(Icons.volunteer_activism),
+            label: 'Doa',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.grid_view_outlined),
+            selectedIcon: Icon(Icons.grid_view),
+            label: 'Lainnya',
           ),
         ],
       ),
@@ -119,18 +145,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  String _locationLabel = 'Lokasi otomatis';
+  LastRead? _lastRead;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocationLabel();
+    _loadLastRead();
+  }
+
+  Future<void> _loadLocationLabel() async {
+    final prefs = await SharedPreferences.getInstance();
+    final manualEnabled = prefs.getBool('manual_location_enabled') ?? false;
+    final manualName = prefs.getString('manual_location_name');
+    final lat = prefs.getDouble('last_lat');
+    final lng = prefs.getDouble('last_lng');
+    if (!mounted) return;
+    if (manualEnabled && manualName != null) {
+      setState(() => _locationLabel = manualName);
+      return;
+    }
+    if (lat == null || lng == null) {
+      setState(() => _locationLabel = 'Aktifkan lokasi untuk akurasi');
+      return;
+    }
+    setState(() {
+      _locationLabel = 'Koordinat ${lat.toStringAsFixed(2)}, ${lng.toStringAsFixed(2)}';
+    });
+  }
+
+  Future<void> _loadLastRead() async {
+    final lastRead = await LastReadService.instance.getLastRead();
+    if (!mounted) return;
+    setState(() => _lastRead = lastRead);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Al-Quran Terjemahan"),
+        title: const Text("Beranda"),
         actions: [
           IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_none),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const QuranPage()),
+              );
+            },
+            icon: const Icon(Icons.search),
+          ),
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsPage()),
+              );
+            },
+            icon: const Icon(Icons.settings),
           ),
         ],
       ),
@@ -139,20 +220,18 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Hero Widget (Prayer Times Shortcut)
-            const SizedBox(
-              height: 200,
-              child:
-                  PrayerTimesPage(), // We embed the Prayer Times widget here directly or refactor it
-            ),
+            _buildLocationHeader(context),
+            const PrayerTimesSummaryCard(),
+            const SizedBox(height: 16),
+            _buildContinueReadingCard(context),
             const SizedBox(height: 20),
-            Text("Menu Utama", style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 10),
+            Text("Aksi Cepat", style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 4,
-              childAspectRatio: 0.8,
+              crossAxisCount: 3,
+              childAspectRatio: 0.95,
               children: [
                 _buildMenuIcon(context, Icons.book, "Al-Quran", () {
                   // Switch to tab 1 (Quran) - Need a way to control parent state or just push
@@ -197,6 +276,154 @@ class HomePage extends StatelessWidget {
                 }),
               ],
             ),
+            const SizedBox(height: 20),
+            Text("Hari Ini", style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            _buildDailyHighlightCard(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationHeader(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PrayerTimesPage()),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          children: [
+            const Icon(Icons.location_on_outlined, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _locationLabel,
+                style: Theme.of(context).textTheme.labelMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContinueReadingCard(BuildContext context) {
+    final lastRead = _lastRead;
+    final hasLastRead = lastRead != null;
+    final surahName =
+        hasLastRead ? quran.getSurahName(lastRead.surah) : '';
+    final totalVerses =
+        hasLastRead ? quran.getVerseCount(lastRead.surah) : 0;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                Icons.bookmark_border,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Lanjutkan Bacaan",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    hasLastRead
+                        ? '$surahName • Ayat ${lastRead.ayah} / $totalVerses'
+                        : "Belum ada bacaan tersimpan",
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                if (!hasLastRead) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const QuranPage()),
+                  ).then((_) => _loadLastRead());
+                  return;
+                }
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SurahDetailPage(
+                      surahNumber: lastRead.surah,
+                      initialVerse: lastRead.ayah,
+                    ),
+                  ),
+                ).then((_) => _loadLastRead());
+              },
+              child: const Text("Lanjut"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDailyHighlightCard(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Ayat pilihan hari ini",
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "Bacaan singkat untuk menjaga ketenangan hari ini.",
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Fitur simpan segera hadir.")),
+                    );
+                  },
+                  icon: const Icon(Icons.bookmark_border, size: 18),
+                  label: const Text("Simpan"),
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Fitur bagikan segera hadir.")),
+                    );
+                  },
+                  icon: const Icon(Icons.share_outlined, size: 18),
+                  label: const Text("Bagikan"),
+                ),
+              ],
+            )
           ],
         ),
       ),

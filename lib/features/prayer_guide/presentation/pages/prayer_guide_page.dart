@@ -380,6 +380,13 @@ class PrayerIllustration extends StatelessWidget {
     }
     final assetPath = _assetPath(type);
     if (assetPath != null) {
+      final fallback = CustomPaint(
+        size: const Size(160, 120),
+        painter: _PrayerIllustrationPainter(
+          type: type,
+          color: Theme.of(context).primaryColor,
+        ),
+      );
       return Center(
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
@@ -387,6 +394,7 @@ class PrayerIllustration extends StatelessWidget {
             assetPath,
             height: 220,
             fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => fallback,
           ),
         ),
       );

@@ -21,6 +21,8 @@ class PrayerTimesPage extends StatefulWidget {
 
 class _PrayerTimesPageState extends State<PrayerTimesPage> {
   String _locationName = "Mencari Lokasi...";
+  bool _manualLocationEnabled = false;
+  String? _manualLocationName;
   PrayerTimes? _prayerTimes;
   Prayer? _nextPrayer;
   DateTime? _nextPrayerTime;
@@ -63,6 +65,13 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
         _isRefreshing = true;
         _errorMessage = null;
       });
+      final manual = await _loadManualLocation();
+      if (manual != null) {
+        _coordinates = manual.coordinates;
+        _locationName = manual.name;
+        await _calculatePrayerTimes(_coordinates!);
+        return;
+      }
       // 1. Permission Check
       final status = await Permission.locationWhenInUse.request();
       if (!status.isGranted) {
@@ -127,6 +136,20 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     });
     _updateCountdown();
     await _scheduleNotificationsIfEnabled(prayerTimes, coordinates, params);
+  }
+
+  Future<_ManualLocation?> _loadManualLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    _manualLocationEnabled = prefs.getBool('manual_location_enabled') ?? false;
+    _manualLocationName = prefs.getString('manual_location_name');
+    if (!_manualLocationEnabled) return null;
+    final lat = prefs.getDouble('last_lat');
+    final lng = prefs.getDouble('last_lng');
+    if (lat == null || lng == null || _manualLocationName == null) return null;
+    return _ManualLocation(
+      name: _manualLocationName!,
+      coordinates: Coordinates(lat, lng),
+    );
   }
 
   Future<void> _scheduleNotificationsIfEnabled(
@@ -525,4 +548,14 @@ class _NextPrayerInfo {
   final DateTime time;
 
   const _NextPrayerInfo(this.prayer, this.time);
+}
+
+class _ManualLocation {
+  final String name;
+  final Coordinates coordinates;
+
+  const _ManualLocation({
+    required this.name,
+    required this.coordinates,
+  });
 }

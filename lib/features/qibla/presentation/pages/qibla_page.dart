@@ -17,7 +17,9 @@ class QiblaPage extends StatefulWidget {
 class _QiblaPageState extends State<QiblaPage> {
   double? _qiblaDirection;
   bool _hasPermission = false;
-  double _lastHeading = 0.0;
+  double? _lastHeading;
+  final List<double> _headingBuffer = [];
+  DateTime? _lastHapticAt;
 
   @override
   void initState() {
@@ -50,45 +52,77 @@ class _QiblaPageState extends State<QiblaPage> {
 
   // Low-Pass Filter to smooth out sensor jitter
   double _smoothHeading(double newHeading) {
-    const double alpha = 0.1; // Smoothing factor (0.0 - 1.0). Lower is smoother but slower.
-    
-    // Handle wrap-around (360 -> 0)
-    double diff = newHeading - _lastHeading;
+    // Keep last few readings and compute circular mean to reduce jitter.
+    _headingBuffer.add(newHeading);
+    if (_headingBuffer.length > 6) {
+      _headingBuffer.removeAt(0);
+    }
+    final average = _circularMean(_headingBuffer);
+    final previous = _lastHeading ?? average;
+    final diff = _angleDelta(average, previous);
+    final alpha = diff.abs() > 10 ? 0.2 : 0.08;
+    var filtered = previous + diff * alpha;
+    filtered = _normalizeAngle(filtered);
+    _lastHeading = filtered;
+    return filtered;
+  }
+
+  double _circularMean(List<double> angles) {
+    double sinSum = 0;
+    double cosSum = 0;
+    for (final angle in angles) {
+      final radians = angle * math.pi / 180;
+      sinSum += math.sin(radians);
+      cosSum += math.cos(radians);
+    }
+    final mean = math.atan2(sinSum, cosSum) * 180 / math.pi;
+    return _normalizeAngle(mean);
+  }
+
+  double _angleDelta(double target, double source) {
+    var diff = target - source;
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
+    return diff;
+  }
 
-    _lastHeading += diff * alpha;
-    
-    // Normalize to 0-360
-    if (_lastHeading < 0) _lastHeading += 360;
-    if (_lastHeading >= 360) _lastHeading -= 360;
-
-    return _lastHeading;
+  double _normalizeAngle(double angle) {
+    var normalized = angle % 360;
+    if (normalized < 0) normalized += 360;
+    return normalized;
   }
 
   @override
   Widget build(BuildContext context) {
-    final goldColor = const Color(0xFFD4AF37);
+    final colorScheme = Theme.of(context).colorScheme;
+    final textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? Colors.white;
+    final subtleText =
+        Theme.of(context).textTheme.bodyMedium?.color ?? Colors.white70;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF121212), // Force dark background for premium feel
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text("Arah Kiblat", style: GoogleFonts.poppins(color: Colors.white)),
+        title: Text("Arah Kiblat", style: GoogleFonts.poppins(color: textColor)),
         centerTitle: true,
       ),
       body: !_hasPermission
           ? _buildPermissionButton()
           : _qiblaDirection == null
-              ? Center(child: CircularProgressIndicator(color: goldColor))
+              ? Center(
+                  child: CircularProgressIndicator(color: colorScheme.secondary),
+                )
               : StreamBuilder<CompassEvent>(
                   stream: FlutterCompass.events,
                   builder: (context, snapshot) {
                     if (snapshot.hasError) return Text('Error: ${snapshot.error}');
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(child: CircularProgressIndicator(color: goldColor));
+                      return Center(
+                        child: CircularProgressIndicator(
+                          color: colorScheme.secondary,
+                        ),
+                      );
                     }
 
                     double? rawHeading = snapshot.data?.heading;
@@ -107,9 +141,15 @@ class _QiblaPageState extends State<QiblaPage> {
                     // 3. The Qibla needle should point to _qiblaDirection on the dial.
 
                     // Check alignment for Haptic Feedback
-                    double diff = (smoothedHeading - _qiblaDirection!).abs();
+                    final diff = _angleDelta(smoothedHeading, _qiblaDirection!).abs();
                     if (diff < 2) {
-                      HapticFeedback.selectionClick();
+                      final now = DateTime.now();
+                      if (_lastHapticAt == null ||
+                          now.difference(_lastHapticAt!) >
+                              const Duration(seconds: 2)) {
+                        HapticFeedback.selectionClick();
+                        _lastHapticAt = now;
+                      }
                     }
 
                     return Center(
@@ -122,18 +162,23 @@ class _QiblaPageState extends State<QiblaPage> {
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(30),
-                              border: Border.all(color: goldColor.withValues(alpha: 0.3)),
+                              border: Border.all(
+                                color: colorScheme.secondary.withValues(alpha: 0.3),
+                              ),
                             ),
                             child: Column(
                               children: [
                                 Text(
                                   "Sudut Qibla",
-                                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+                                  style: GoogleFonts.poppins(
+                                    color: subtleText,
+                                    fontSize: 12,
+                                  ),
                                 ),
                                 Text(
                                   "${_qiblaDirection!.toStringAsFixed(1)}°",
                                   style: GoogleFonts.poppins(
-                                    color: goldColor,
+                                    color: colorScheme.secondary,
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -154,10 +199,13 @@ class _QiblaPageState extends State<QiblaPage> {
                                 Container(
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 2),
+                                    border: Border.all(
+                                      color: Colors.grey.withValues(alpha: 0.2),
+                                      width: 2,
+                                    ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: goldColor.withValues(alpha: 0.1),
+                                        color: colorScheme.secondary.withValues(alpha: 0.1),
                                         blurRadius: 50,
                                         spreadRadius: 1,
                                       )
@@ -167,7 +215,8 @@ class _QiblaPageState extends State<QiblaPage> {
 
                                 // 2. Rotating Dial (The Card)
                                 AnimatedRotation(
-                                  duration: const Duration(milliseconds: 50), // Smooth via stream, but layout animation helps
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.easeOut,
                                   turns: -smoothedHeading / 360,
                                   child: Stack(
                                     alignment: Alignment.center,
@@ -198,7 +247,11 @@ class _QiblaPageState extends State<QiblaPage> {
                                         angle: (_qiblaDirection! * (math.pi / 180)),
                                         child: Column(
                                           children: [
-                                            Icon(Icons.location_on, color: goldColor, size: 40),
+                                            Icon(
+                                              Icons.location_on,
+                                              color: colorScheme.secondary,
+                                              size: 40,
+                                            ),
                                             const Spacer(),
                                           ],
                                         ),
@@ -222,7 +275,7 @@ class _QiblaPageState extends State<QiblaPage> {
                           // Status Text
                           Text(
                             "Sejajarkan ikon Ka'bah dengan panah",
-                            style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+                            style: GoogleFonts.poppins(color: subtleText, fontSize: 12),
                           ),
                         ],
                       ),
@@ -236,7 +289,7 @@ class _QiblaPageState extends State<QiblaPage> {
     return Center(
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFD4AF37),
+          backgroundColor: Theme.of(context).colorScheme.secondary,
           foregroundColor: Colors.black,
         ),
         onPressed: _checkPermissionAndCalculateQibla,
