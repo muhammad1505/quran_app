@@ -7,9 +7,11 @@ import 'features/doa/presentation/pages/doa_page.dart';
 import 'features/prayer_guide/presentation/pages/prayer_guide_page.dart';
 import 'features/settings/presentation/pages/settings_page.dart';
 import 'features/asmaul_husna/presentation/pages/asmaul_husna_page.dart';
+import 'core/services/prayer_notification_service.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await PrayerNotificationService.instance.initialize();
   runApp(const QuranApp());
 }
 

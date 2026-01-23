@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,6 +9,7 @@ import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/settings/prayer_settings.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 import 'package:quran_app/features/quran/presentation/pages/murotal_download_page.dart';
+import 'package:quran_app/core/services/prayer_notification_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -79,6 +83,7 @@ class _SettingsPageState extends State<SettingsPage> {
             onChanged: (val) {
               setState(() => _enableNotifications = val);
               _saveSetting('notifications', val);
+              unawaited(_syncPrayerNotifications(val));
             },
           ),
           const Divider(),
@@ -414,6 +419,40 @@ class _SettingsPageState extends State<SettingsPage> {
           }).toList(),
         ),
       ),
+    );
+  }
+
+  Future<void> _syncPrayerNotifications(bool enabled) async {
+    if (!enabled) {
+      await PrayerNotificationService.instance.cancelAll();
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final lat = prefs.getDouble('last_lat');
+    final lng = prefs.getDouble('last_lng');
+    if (lat == null || lng == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Buka halaman Jadwal Sholat terlebih dahulu untuk menentukan lokasi.",
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    final params = _prayerSettings.buildParameters();
+    final coords = Coordinates(lat, lng);
+    final today = PrayerTimes.today(coords, params);
+    final tomorrow = PrayerTimes(
+      coords,
+      DateComponents.from(DateTime.now().add(const Duration(days: 1))),
+      params,
+    );
+    await PrayerNotificationService.instance.schedulePrayerTimes(
+      today,
+      tomorrow,
     );
   }
 }
