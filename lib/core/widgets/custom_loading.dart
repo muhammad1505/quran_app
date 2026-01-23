@@ -9,7 +9,8 @@ class CustomLoadingWidget extends StatefulWidget {
   State<CustomLoadingWidget> createState() => _CustomLoadingWidgetState();
 }
 
-class _CustomLoadingWidgetState extends State<CustomLoadingWidget> with SingleTickerProviderStateMixin {
+class _CustomLoadingWidgetState extends State<CustomLoadingWidget>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
@@ -22,13 +23,15 @@ class _CustomLoadingWidgetState extends State<CustomLoadingWidget> with SingleTi
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    
-    _fadeAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.2,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -73,7 +76,7 @@ class _CustomLoadingWidgetState extends State<CustomLoadingWidget> with SingleTi
                       color: Colors.black.withOpacity(0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
-                    )
+                    ),
                   ],
                 ),
                 child: Icon(

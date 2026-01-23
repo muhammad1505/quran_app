@@ -41,7 +41,10 @@ class AppTheme {
         surfaceTintColor: Colors.white,
       ),
       textTheme: GoogleFonts.poppinsTextTheme().copyWith(
-        displayLarge: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: primaryColor),
+        displayLarge: GoogleFonts.poppins(
+          fontWeight: FontWeight.bold,
+          color: primaryColor,
+        ),
         bodyLarge: GoogleFonts.poppins(color: Colors.black87),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -87,9 +90,15 @@ class AppTheme {
         backgroundColor: const Color(0xFF1A1A1A),
         indicatorColor: secondaryColor.withOpacity(0.2),
         labelTextStyle: MaterialStateProperty.all(
-          GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white70),
+          GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.white70,
+          ),
         ),
-        iconTheme: MaterialStateProperty.all(const IconThemeData(color: Colors.white70)),
+        iconTheme: MaterialStateProperty.all(
+          const IconThemeData(color: Colors.white70),
+        ),
       ),
     );
   }

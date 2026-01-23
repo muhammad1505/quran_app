@@ -11,9 +11,7 @@ class QuranPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Al-Quran Al-Karim"),
-        actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.search)),
-        ],
+        actions: [IconButton(onPressed: () {}, icon: const Icon(Icons.search))],
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -36,7 +34,12 @@ class QuranPage extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => SurahDetailPage(surahNumber: surahNumber)));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SurahDetailPage(surahNumber: surahNumber),
+                  ),
+                );
               },
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -51,7 +54,9 @@ class QuranPage extends StatelessWidget {
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              color: Theme.of(context).primaryColor.withOpacity(0.1),
+                              color: Theme.of(
+                                context,
+                              ).primaryColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
@@ -59,9 +64,9 @@ class QuranPage extends StatelessWidget {
                         Text(
                           "$surahNumber",
                           style: GoogleFonts.poppins(
-                            fontSize: 14, 
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: Theme.of(context).primaryColor
+                            color: Theme.of(context).primaryColor,
                           ),
                         ),
                       ],
@@ -73,12 +78,18 @@ class QuranPage extends StatelessWidget {
                         children: [
                           Text(
                             quran.getSurahName(surahNumber),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             "${quran.getPlaceOfRevelation(surahNumber)} • ${quran.getVerseCount(surahNumber)} Ayat",
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
                           ),
                         ],
                       ),
@@ -86,9 +97,9 @@ class QuranPage extends StatelessWidget {
                     Text(
                       quran.getSurahNameArabic(surahNumber),
                       style: GoogleFonts.amiri(
-                        fontSize: 26, 
+                        fontSize: 26,
                         color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
@@ -122,7 +133,9 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     _audioPlayer.playerStateStream.listen((state) {
       setState(() {
         _isPlaying = state.playing;
-        _isLoading = state.processingState == ProcessingState.loading || state.processingState == ProcessingState.buffering;
+        _isLoading =
+            state.processingState == ProcessingState.loading ||
+            state.processingState == ProcessingState.buffering;
       });
     });
   }
@@ -143,7 +156,10 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
           await _audioPlayer.setUrl(url);
           await _audioPlayer.play();
         } catch (e) {
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+          if (mounted)
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text("Error: $e")));
         }
       } else {
         await _audioPlayer.play();
@@ -158,16 +174,34 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
       appBar: AppBar(
         title: Column(
           children: [
-            Text(quran.getSurahName(widget.surahNumber), style: const TextStyle(fontSize: 18)),
-            Text(quran.getSurahNameArabic(widget.surahNumber), style: GoogleFonts.amiri(fontSize: 14, color: Colors.grey)),
+            Text(
+              quran.getSurahName(widget.surahNumber),
+              style: const TextStyle(fontSize: 18),
+            ),
+            Text(
+              quran.getSurahNameArabic(widget.surahNumber),
+              style: GoogleFonts.amiri(fontSize: 14, color: Colors.grey),
+            ),
           ],
         ),
         actions: [
           IconButton(
             onPressed: _isLoading ? null : _playPause,
-            icon: _isLoading 
-                ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).primaryColor))
-                : Icon(_isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled, size: 30),
+            icon: _isLoading
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  )
+                : Icon(
+                    _isPlaying
+                        ? Icons.pause_circle_filled
+                        : Icons.play_circle_filled,
+                    size: 30,
+                  ),
           ),
         ],
       ),
@@ -179,7 +213,10 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Theme.of(context).primaryColor, Theme.of(context).primaryColor.withOpacity(0.8)],
+                colors: [
+                  Theme.of(context).primaryColor,
+                  Theme.of(context).primaryColor.withOpacity(0.8),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -198,9 +235,14 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
               itemBuilder: (context, index) {
                 final verseNumber = index + 1;
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 20,
+                  ),
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.1))),
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.withOpacity(0.1)),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -209,37 +251,69 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).primaryColor.withOpacity(0.1),
+                              color: Theme.of(
+                                context,
+                              ).primaryColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
                               children: [
-                                Text("Ayat $verseNumber", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                                Text(
+                                  "Ayat $verseNumber",
+                                  style: TextStyle(
+                                    color: Theme.of(context).primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                           Row(
                             children: [
-                               Icon(Icons.share_outlined, size: 20, color: Colors.grey[400]),
-                               const SizedBox(width: 16),
-                               Icon(Icons.bookmark_border, size: 20, color: Colors.grey[400]),
+                              Icon(
+                                Icons.share_outlined,
+                                size: 20,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(width: 16),
+                              Icon(
+                                Icons.bookmark_border,
+                                size: 20,
+                                color: Colors.grey[400],
+                              ),
                             ],
-                          )
+                          ),
                         ],
                       ),
                       const SizedBox(height: 24),
                       Text(
                         quran.getVerse(widget.surahNumber, verseNumber),
                         textAlign: TextAlign.right,
-                        style: GoogleFonts.amiri(fontSize: 30, height: 2.2, color: Theme.of(context).textTheme.bodyLarge?.color),
+                        style: GoogleFonts.amiri(
+                          fontSize: 30,
+                          height: 2.2,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        quran.getVerseTranslation(widget.surahNumber, verseNumber, translation: quran.Translation.idIndonesian),
+                        quran.getVerseTranslation(
+                          widget.surahNumber,
+                          verseNumber,
+                          translation: quran.Translation.idIndonesian,
+                        ),
                         textAlign: TextAlign.left,
-                        style: GoogleFonts.poppins(fontSize: 14, height: 1.6, color: Colors.grey[600]),
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          height: 1.6,
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),
