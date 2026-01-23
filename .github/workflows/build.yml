@@ -29,6 +29,23 @@ jobs:
       - name: Scaffold Android
         run: flutter create . --platforms android
 
+      # Fix for flutter_qiblah missing namespace in AGP 8.0+
+      - name: Patch flutter_qiblah namespace
+        run: |
+          # Find the package location
+          PACKAGE_PATH=$(flutter pub cache list | grep flutter_qiblah | cut -d " " -f 3 | tr -d '[:space:]')
+          if [ -z "$PACKAGE_PATH" ]; then
+             # Fallback if 'flutter pub cache list' output format differs or isn't available
+             # Assuming standard hosted cache structure
+             PACKAGE_PATH="$PUB_CACHE/hosted/pub.dev/flutter_qiblah-2.2.1"
+          fi
+          
+          # Just simply look for it in the standard cache location if the grep fails or to be sure
+          # We use a wildcard for version to be safe
+          find $PUB_CACHE/hosted/pub.dev/flutter_qiblah* -name "build.gradle" -exec sed -i 's/android {/android {\n    namespace "ml.medyas.flutter_qiblah"/g' {} +
+          
+          echo "Patched flutter_qiblah build.gradle namespace"
+
       - name: Build APK (Release)
         run: flutter build apk --release --split-per-abi
         
