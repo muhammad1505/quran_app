@@ -10,7 +10,9 @@ void main() {
     expect(find.byType(SplashScreen), findsOneWidget);
 
     // Wait for splash screen timer to finish (3 seconds) + transition
-    await tester.pumpAndSettle(const Duration(seconds: 4));
+    // Use pump instead of pumpAndSettle to avoid timeout from infinite loading animations
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(); // Allow navigation to complete
 
     // Verify that we are now at DashboardScreen
     expect(find.byType(DashboardScreen), findsOneWidget);
