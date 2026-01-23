@@ -50,7 +50,7 @@ class _SettingsPageState extends State<SettingsPage> {
             title: const Text("Notifikasi Adzan"),
             subtitle: const Text("Aktifkan pengingat waktu sholat"),
             value: _enableNotifications,
-            activeColor: Theme.of(context).primaryColor,
+            // activeColor removed to use Theme primary color automatically and avoid deprecation warning
             onChanged: (val) {
               setState(() => _enableNotifications = val);
               _saveSetting('notifications', val);

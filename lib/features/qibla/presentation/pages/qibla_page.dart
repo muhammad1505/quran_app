@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:adhan/adhan.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:math' as math;
 
 class QiblaPage extends StatefulWidget {
   const QiblaPage({super.key});
@@ -70,19 +69,12 @@ class _QiblaPageState extends State<QiblaPage> {
 
                 double? direction = snapshot.data?.heading;
 
-                // if direction is null, then device does not support this sensor
-                if (direction == null) {
-                  return const Center(
-                    child: Text("Device does not support sensors"),
-                  );
-                }
+                    // if direction is null, then device does not support this sensor
+                    if (direction == null) {
+                      return const Center(child: Text("Device does not support sensors"));
+                    }
 
-                // Calculate rotation: Qibla - Device Heading
-                // Normalize to 0-360
-                double rotation = (_qiblaDirection! - direction);
-                // Convert to radians for Transform.rotate (but we use turns in AnimatedRotation which is 0-1)
-
-                return Center(
+                    return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
