@@ -1430,9 +1430,9 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   }
 
   Future<void> _showFolderPicker(int verseNumber) async {
-    final sheetContext = context;
     final folders = await BookmarkService.instance.getFolders();
     if (!mounted) return;
+    final sheetContext = context;
     if (!_isBookmarked(verseNumber)) {
       await BookmarkService.instance.toggleBookmark(
         surah: widget.surahNumber,

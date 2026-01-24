@@ -271,9 +271,9 @@ class _SettingsPageState extends State<SettingsPage> {
           const Divider(),
           _buildSectionHeader("Tentang"),
           const ListTile(
-            title: const Text("Versi Aplikasi"),
-            subtitle: const Text("1.0.0 (Release)"),
-            leading: const Icon(Icons.info_outline),
+            title: Text("Versi Aplikasi"),
+            subtitle: Text("1.0.0 (Release)"),
+            leading: Icon(Icons.info_outline),
           ),
         ],
       ),
