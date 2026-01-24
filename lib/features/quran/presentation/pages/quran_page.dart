@@ -1886,6 +1886,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     required String subject,
   }) async {
     try {
+      final pixelRatio = MediaQuery.of(context).devicePixelRatio;
       await Future.delayed(const Duration(milliseconds: 50));
       await WidgetsBinding.instance.endOfFrame;
       final boundary = boundaryKey.currentContext?.findRenderObject()
@@ -1897,7 +1898,6 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
         await Future.delayed(const Duration(milliseconds: 20));
         await WidgetsBinding.instance.endOfFrame;
       }
-      final pixelRatio = MediaQuery.of(context).devicePixelRatio;
       final image = await boundary.toImage(pixelRatio: pixelRatio);
       final byteData =
           await image.toByteData(format: ui.ImageByteFormat.png);
