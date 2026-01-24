@@ -13,6 +13,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: subosito/flutter-action@v2
         with:
@@ -144,6 +146,21 @@ jobs:
           mkdir -p build/out
           cp "build/app/outputs/flutter-apk/app-release.apk" "build/out/${APK_NAME}"
 
+      - name: Generate Changelog
+        run: |
+          git fetch --tags --force
+          CURRENT_TAG="${GITHUB_REF_NAME}"
+          PREV_TAG=$(git describe --tags --abbrev=0 "${CURRENT_TAG}^" 2>/dev/null || true)
+          echo "## Changelog" > release_notes.md
+          echo "" >> release_notes.md
+          if [ -n "$PREV_TAG" ]; then
+            echo "### Perubahan sejak ${PREV_TAG}" >> release_notes.md
+            git log --pretty=format:"- %s (%h)" "${PREV_TAG}..${CURRENT_TAG}" >> release_notes.md
+          else
+            echo "### Perubahan pada ${CURRENT_TAG}" >> release_notes.md
+            git log --pretty=format:"- %s (%h)" -n 20 "${CURRENT_TAG}" >> release_notes.md
+          fi
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
@@ -154,4 +171,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ env.APP_NAME }} ${{ env.VERSION }}
+          body_path: release_notes.md
           files: build/out/${{ env.APK_NAME }}
