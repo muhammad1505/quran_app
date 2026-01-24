@@ -5,7 +5,7 @@ class ArticlesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final articles = _articles;
+    const articles = _articles;
     return Scaffold(
       appBar: AppBar(title: const Text('Artikel Panduan')),
       body: ListView.builder(

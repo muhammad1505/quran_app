@@ -12,8 +12,8 @@ class DoaPage extends StatefulWidget {
 }
 
 class _DoaPageState extends State<DoaPage> {
-  final List<_DoaItem> _doas = const [
-    _DoaItem(
+  final List<DoaItem> _doas = const [
+    DoaItem(
       title: 'Doa Pagi',
       arabic: 'اَللّٰهُمَّ بِكَ أَصْبَحْنَا وَبِكَ أَمْسَيْنَا',
       latin: 'Allahumma bika asbahna wa bika amsayna.',
@@ -21,7 +21,7 @@ class _DoaPageState extends State<DoaPage> {
       category: 'Pagi',
       source: 'HR. Abu Dawud',
     ),
-    _DoaItem(
+    DoaItem(
       title: 'Doa Petang',
       arabic: 'اَللّٰهُمَّ بِكَ أَمْسَيْنَا وَبِكَ أَصْبَحْنَا',
       latin: 'Allahumma bika amsayna wa bika asbahna.',
@@ -29,7 +29,7 @@ class _DoaPageState extends State<DoaPage> {
       category: 'Malam',
       source: 'HR. Abu Dawud',
     ),
-    _DoaItem(
+    DoaItem(
       title: 'Doa Masuk Masjid',
       arabic: 'اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ',
       latin: 'Allahummaftah li abwaba rahmatik.',
@@ -37,7 +37,7 @@ class _DoaPageState extends State<DoaPage> {
       category: 'Masjid',
       source: 'HR. Muslim',
     ),
-    _DoaItem(
+    DoaItem(
       title: 'Doa Keluar Masjid',
       arabic: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ',
       latin: 'Allahumma inni as\'aluka min fadhlik.',
@@ -45,7 +45,7 @@ class _DoaPageState extends State<DoaPage> {
       category: 'Masjid',
       source: 'HR. Muslim',
     ),
-    _DoaItem(
+    DoaItem(
       title: 'Doa Sebelum Makan',
       arabic: 'اللَّهُمَّ بَارِكْ لَنَا فِيمَا رَزَقْتَنَا',
       latin: 'Allahumma barik lana fima razaqtana.',
@@ -84,7 +84,7 @@ class _DoaPageState extends State<DoaPage> {
   void initState() {
     super.initState();
     _dzikirProgress =
-        List.generate(_dzikirItems.length, (_) => _DzikirProgress());
+        List.generate(_dzikirItems.length, (_) => const _DzikirProgress());
   }
 
   List<String> get _categories {
@@ -92,7 +92,7 @@ class _DoaPageState extends State<DoaPage> {
     return ['Semua', ...unique];
   }
 
-  List<_DoaItem> get _filteredDoas {
+  List<DoaItem> get _filteredDoas {
     if (_selectedCategory == 'Semua') return _doas;
     return _doas.where((doa) => doa.category == _selectedCategory).toList();
   }
@@ -153,7 +153,7 @@ class _DoaPageState extends State<DoaPage> {
     );
   }
 
-  Widget _buildDoaCard(BuildContext context, _DoaItem doa) {
+  Widget _buildDoaCard(BuildContext context, DoaItem doa) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -319,7 +319,7 @@ class _DoaPageState extends State<DoaPage> {
   }
 }
 
-class _DoaItem {
+class DoaItem {
   final String title;
   final String arabic;
   final String latin;
@@ -327,7 +327,7 @@ class _DoaItem {
   final String category;
   final String source;
 
-  const _DoaItem({
+  const DoaItem({
     required this.title,
     required this.arabic,
     this.latin = '',
@@ -352,7 +352,7 @@ class _DzikirItem {
 }
 
 class DoaDetailPage extends StatelessWidget {
-  final _DoaItem doa;
+  final DoaItem doa;
 
   const DoaDetailPage({super.key, required this.doa});
 

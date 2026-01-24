@@ -395,11 +395,11 @@ class _SettingsPageState extends State<SettingsPage> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () async {
+                          final navigator = Navigator.of(context);
                           await _prayerSettings
                               .updateCorrectionMinutes(temp.toInt());
-                          if (mounted) {
-                            Navigator.pop(context);
-                          }
+                          if (!mounted) return;
+                          navigator.pop();
                           await _refreshPrayerNotifications();
                         },
                         child: const Text('Simpan'),
@@ -500,10 +500,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 groupValue: _prayerSettings.value.adzanSound,
                 onChanged: (value) async {
                   if (value == null) return;
+                  final navigator = Navigator.of(context);
                   await _prayerSettings.setAdzanSound(value);
-                  if (mounted) {
-                    Navigator.pop(context);
-                  }
+                  if (!mounted) return;
+                  navigator.pop();
                 },
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
