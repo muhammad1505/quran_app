@@ -1887,6 +1887,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   }) async {
     try {
       final pixelRatio = MediaQuery.of(context).devicePixelRatio;
+      final messenger = ScaffoldMessenger.maybeOf(context);
       await Future.delayed(const Duration(milliseconds: 50));
       await WidgetsBinding.instance.endOfFrame;
       final boundary = boundaryKey.currentContext?.findRenderObject()
@@ -1913,11 +1914,10 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
         text: subject,
       );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal membagikan ayat: $e')),
-        );
-      }
+      if (!mounted) return;
+      messenger?.showSnackBar(
+        SnackBar(content: Text('Gagal membagikan ayat: $e')),
+      );
     }
   }
 
