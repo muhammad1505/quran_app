@@ -1914,8 +1914,11 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
           [XFile(file.path)],
           text: subject,
         );
-      } on LateInitializationError catch (e) {
-        if (!e.toString().contains('localResult')) rethrow;
+      } on Error catch (e) {
+        if (e.runtimeType.toString() != 'LateInitializationError' ||
+            !e.toString().contains('localResult')) {
+          rethrow;
+        }
         // Some devices throw this even though the share sheet opens.
       }
     } catch (e) {
