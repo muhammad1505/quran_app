@@ -1885,9 +1885,9 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     required String fileName,
     required String subject,
   }) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
     try {
       final pixelRatio = MediaQuery.of(context).devicePixelRatio;
-      final messenger = ScaffoldMessenger.maybeOf(context);
       await Future.delayed(const Duration(milliseconds: 50));
       await WidgetsBinding.instance.endOfFrame;
       final boundary = boundaryKey.currentContext?.findRenderObject()
