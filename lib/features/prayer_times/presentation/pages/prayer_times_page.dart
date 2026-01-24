@@ -33,6 +33,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
   bool _isLoading = true;
   bool _isRefreshing = false;
   String? _errorMessage;
+  String? _warningMessage;
   Coordinates? _coordinates;
   final PrayerSettingsController _prayerSettings =
       PrayerSettingsController.instance;
@@ -68,6 +69,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       setState(() {
         _isRefreshing = true;
         _errorMessage = null;
+        _warningMessage = null;
       });
       final manual = await _loadManualLocation();
       if (manual != null) {
@@ -76,9 +78,17 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
         await _calculatePrayerTimes(_coordinates!);
         return;
       }
+      final cached = await _loadCachedLocation();
       // 1. Permission Check
       final status = await Permission.locationWhenInUse.request();
       if (!status.isGranted) {
+        if (cached != null) {
+          await _useCachedLocation(
+            cached,
+            message: "Izin lokasi ditolak. Menampilkan lokasi terakhir.",
+          );
+          return;
+        }
         setState(() {
           _locationName = "Izin Lokasi Ditolak";
           _isLoading = false;
@@ -101,10 +111,10 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
         );
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
-          setState(() {
-            _locationName =
-                "${place.subAdministrativeArea ?? place.locality}, ${place.country}";
-          });
+          final name =
+              "${place.subAdministrativeArea ?? place.locality}, ${place.country}";
+          setState(() => _locationName = name);
+          await _storeLastLocationName(name);
         }
       } catch (e) {
         setState(() {
@@ -118,6 +128,14 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       await _calculatePrayerTimes(_coordinates!);
 
     } catch (e) {
+      final cached = await _loadCachedLocation();
+      if (cached != null) {
+        await _useCachedLocation(
+          cached,
+          message: "Gagal memuat lokasi terbaru. Menampilkan lokasi terakhir.",
+        );
+        return;
+      }
       setState(() {
         _locationName = "Gagal memuat lokasi";
         _isLoading = false;
@@ -153,6 +171,39 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     return _ManualLocation(
       name: _manualLocationName!,
       coordinates: Coordinates(lat, lng),
+    );
+  }
+
+  Future<_CachedLocation?> _loadCachedLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lat = prefs.getDouble('last_lat');
+    final lng = prefs.getDouble('last_lng');
+    if (lat == null || lng == null) return null;
+    final name = prefs.getString('last_location_name');
+    return _CachedLocation(
+      name: name,
+      coordinates: Coordinates(lat, lng),
+    );
+  }
+
+  Future<void> _useCachedLocation(
+    _CachedLocation cached, {
+    required String message,
+  }) async {
+    if (mounted) {
+      setState(() {
+        _coordinates = cached.coordinates;
+        _locationName = cached.name ?? "Lokasi terakhir";
+        _warningMessage = message;
+        _isLoading = false;
+        _isRefreshing = false;
+        _errorMessage = null;
+      });
+    }
+    await _calculatePrayerTimes(cached.coordinates);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 
@@ -244,6 +295,11 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     await prefs.setDouble('last_lng', position.longitude);
   }
 
+  Future<void> _storeLastLocationName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('last_location_name', name);
+  }
+
   Future<void> _handleRefresh() async {
     await _initLocationAndPrayers();
   }
@@ -277,6 +333,10 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                     padding: const EdgeInsets.all(20.0),
                     children: [
                       _buildHeaderCard(),
+                      if (_warningMessage != null) ...[
+                        const SizedBox(height: 12),
+                        _buildWarningBanner(_warningMessage!),
+                      ],
                       const SizedBox(height: 20),
                       _buildInfoRow(),
                       const SizedBox(height: 16),
@@ -625,6 +685,29 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     );
   }
 
+  Widget _buildWarningBanner(String message) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, color: Colors.amber),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSettingsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -940,6 +1023,16 @@ class _ManualLocation {
   final Coordinates coordinates;
 
   const _ManualLocation({
+    required this.name,
+    required this.coordinates,
+  });
+}
+
+class _CachedLocation {
+  final String? name;
+  final Coordinates coordinates;
+
+  const _CachedLocation({
     required this.name,
     required this.coordinates,
   });

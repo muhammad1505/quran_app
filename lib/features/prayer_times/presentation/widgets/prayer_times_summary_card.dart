@@ -63,6 +63,7 @@ class _PrayerTimesSummaryCardState extends State<PrayerTimesSummaryCard> {
     final prefs = await SharedPreferences.getInstance();
     _manualLocationEnabled = prefs.getBool('manual_location_enabled') ?? false;
     _manualLocationName = prefs.getString('manual_location_name');
+    final lastName = prefs.getString('last_location_name');
     final lat = prefs.getDouble('last_lat');
     final lng = prefs.getDouble('last_lng');
     if (lat != null && lng != null) {
@@ -74,6 +75,8 @@ class _PrayerTimesSummaryCardState extends State<PrayerTimesSummaryCard> {
         _errorMessage = null;
         if (_manualLocationEnabled && _manualLocationName != null) {
           _locationName = _manualLocationName!;
+        } else if (lastName != null) {
+          _locationName = lastName;
         }
       });
     }
@@ -119,11 +122,13 @@ class _PrayerTimesSummaryCardState extends State<PrayerTimesSummaryCard> {
       );
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
+        final name =
+            "${place.subAdministrativeArea ?? place.locality}, ${place.country}";
         if (!mounted) return;
         setState(() {
-          _locationName =
-              "${place.subAdministrativeArea ?? place.locality}, ${place.country}";
+          _locationName = name;
         });
+        await _storeLastLocationName(name);
       }
     } catch (_) {
       if (!mounted) return;
@@ -138,6 +143,11 @@ class _PrayerTimesSummaryCardState extends State<PrayerTimesSummaryCard> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('last_lat', position.latitude);
     await prefs.setDouble('last_lng', position.longitude);
+  }
+
+  Future<void> _storeLastLocationName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('last_location_name', name);
   }
 
   void _calculatePrayerTimes(Coordinates coordinates) {
