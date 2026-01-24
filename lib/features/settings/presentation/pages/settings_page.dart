@@ -118,6 +118,12 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
           ListTile(
+            title: const Text("Sumber Tafsir"),
+            subtitle: Text(_quranSettings.value.tafsirSource.label),
+            leading: const Icon(Icons.menu_book_outlined),
+            onTap: _showTafsirSourceDialog,
+          ),
+          ListTile(
             title: const Text("Ukuran Teks"),
             subtitle: const Text("Arab & terjemahan"),
             leading: const Icon(Icons.text_fields),
@@ -356,6 +362,28 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showTafsirSourceDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Sumber Tafsir"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: TafsirSource.values.map((source) {
+            return _buildSelectTile(
+              title: source.label,
+              selected: _quranSettings.value.tafsirSource == source,
+              onTap: () {
+                _quranSettings.setTafsirSource(source);
+                Navigator.pop(ctx);
+              },
+            );
+          }).toList(),
         ),
       ),
     );

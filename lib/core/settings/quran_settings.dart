@@ -11,6 +11,25 @@ enum TranslationSource {
   enSaheeh,
 }
 
+enum TafsirSource {
+  equran,
+  gading,
+  kemenag,
+}
+
+extension TafsirSourceExtension on TafsirSource {
+  String get label {
+    switch (this) {
+      case TafsirSource.equran:
+        return 'EQuran.id (Tafsir Kemenag)';
+      case TafsirSource.gading:
+        return 'Quran Gading (Tafsir Kemenag)';
+      case TafsirSource.kemenag:
+        return 'Kemenag RI (API resmi)';
+    }
+  }
+}
+
 enum ArabicFontFamily { amiri, scheherazade, lateef }
 
 extension ArabicFontFamilyExtension on ArabicFontFamily {
@@ -64,6 +83,7 @@ class QuranSettings {
   final double translationFontSize;
   final double arabicLineHeight;
   final ArabicFontFamily arabicFontFamily;
+  final TafsirSource tafsirSource;
 
   const QuranSettings({
     this.translation = TranslationSource.idKemenag,
@@ -74,6 +94,7 @@ class QuranSettings {
     this.translationFontSize = 16,
     this.arabicLineHeight = 2.0,
     this.arabicFontFamily = ArabicFontFamily.amiri,
+    this.tafsirSource = TafsirSource.equran,
   });
 
   QuranSettings copyWith({
@@ -85,6 +106,7 @@ class QuranSettings {
     double? translationFontSize,
     double? arabicLineHeight,
     ArabicFontFamily? arabicFontFamily,
+    TafsirSource? tafsirSource,
   }) {
     return QuranSettings(
       translation: translation ?? this.translation,
@@ -95,6 +117,7 @@ class QuranSettings {
       translationFontSize: translationFontSize ?? this.translationFontSize,
       arabicLineHeight: arabicLineHeight ?? this.arabicLineHeight,
       arabicFontFamily: arabicFontFamily ?? this.arabicFontFamily,
+      tafsirSource: tafsirSource ?? this.tafsirSource,
     );
   }
 }
@@ -108,6 +131,7 @@ class QuranSettingsController extends ChangeNotifier {
   static const _translationFontSizeKey = 'translation_font_size';
   static const _arabicLineHeightKey = 'arabic_line_height';
   static const _arabicFontKey = 'arabic_font_family';
+  static const _tafsirSourceKey = 'tafsir_source';
 
   QuranSettingsController._();
 
@@ -128,6 +152,7 @@ class QuranSettingsController extends ChangeNotifier {
       translationFontSize: prefs.getDouble(_translationFontSizeKey) ?? 16,
       arabicLineHeight: prefs.getDouble(_arabicLineHeightKey) ?? 2.0,
       arabicFontFamily: _parseArabicFont(prefs.getString(_arabicFontKey)),
+      tafsirSource: _parseTafsirSource(prefs.getString(_tafsirSourceKey)),
     );
     notifyListeners();
   }
@@ -188,6 +213,13 @@ class QuranSettingsController extends ChangeNotifier {
     await prefs.setString(_arabicFontKey, family.name);
   }
 
+  Future<void> setTafsirSource(TafsirSource source) async {
+    _value = _value.copyWith(tafsirSource: source);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tafsirSourceKey, source.name);
+  }
+
   TranslationSource _parseTranslation(String? code) {
     if (code == null) {
       return TranslationSource.idKemenag;
@@ -209,6 +241,14 @@ class QuranSettingsController extends ChangeNotifier {
     return ArabicFontFamily.values.firstWhere(
       (font) => font.name == code,
       orElse: () => ArabicFontFamily.amiri,
+    );
+  }
+
+  TafsirSource _parseTafsirSource(String? code) {
+    if (code == null) return TafsirSource.equran;
+    return TafsirSource.values.firstWhere(
+      (source) => source.name == code,
+      orElse: () => TafsirSource.equran,
     );
   }
 }

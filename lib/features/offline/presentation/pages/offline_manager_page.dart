@@ -45,12 +45,12 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
     final downloaded =
         await AudioCacheService.instance.listDownloadedSurahs(qariId);
     final audioSize = await _calculateAudioSize(qariId);
-    final tafsirReady = await TafsirService.instance.getTafsir(1, 1);
+    final tafsirReady = await TafsirService.instance.hasOfflineData();
     if (!mounted) return;
     setState(() {
       _downloadedCount = downloaded.length;
       _audioSizeLabel = _formatBytes(audioSize);
-      _tafsirAvailable = tafsirReady != null && tafsirReady.isNotEmpty;
+      _tafsirAvailable = tafsirReady;
       _isLoading = false;
     });
   }
@@ -190,8 +190,7 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
   }
 
   _TranslationStatus _translationStatus() {
-    final kemenagAvailable =
-        !TranslationAssetService.instance.requiresAsset(TranslationSource.idKemenag);
+    final kemenagAvailable = true;
     final kingFahadAvailable =
         TranslationAssetService.instance.requiresAsset(TranslationSource.idKingFahad);
     final sabiqAvailable =

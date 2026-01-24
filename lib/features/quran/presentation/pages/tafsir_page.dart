@@ -25,6 +25,12 @@ class TafsirPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final title =
         '${quran.getSurahName(surahNumber)} : $verseNumber';
+    final settings = QuranSettingsController.instance.value;
+    final future = TafsirService.instance.getTafsir(
+      surah: surahNumber,
+      ayah: verseNumber,
+      source: settings.tafsirSource,
+    );
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -39,29 +45,63 @@ class TafsirPage extends StatelessWidget {
         ),
         body: TabBarView(
           children: [
-            _TafsirSection(
-              arabic: arabic,
-              transliteration: transliteration,
-              content: translation,
-              sourceLabel: 'Terjemahan sebagai tafsir ringkas',
-            ),
-            FutureBuilder<String?>(
-              future: TafsirService.instance.getTafsir(
-                surahNumber,
-                verseNumber,
-              ),
+            FutureBuilder<TafsirEntry?>(
+              future: future,
               builder: (context, snapshot) {
-                final tafsir = snapshot.data;
-                final content = (tafsir == null || tafsir.isEmpty)
-                    ? 'Tafsir lengkap belum tersedia offline.'
-                    : tafsir;
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return _TafsirSection(
+                    arabic: arabic,
+                    transliteration: transliteration,
+                    content: translation,
+                    sourceLabel: 'Gagal memuat tafsir. Menampilkan terjemahan.',
+                  );
+                }
+                final entry = snapshot.data;
+                final content = entry?.short?.isNotEmpty == true
+                    ? entry!.short!
+                    : (entry?.long?.isNotEmpty == true
+                        ? entry!.long!
+                        : translation);
+                final label = entry?.sourceLabel ??
+                    'Terjemahan sebagai ringkasan tafsir';
                 return _TafsirSection(
                   arabic: arabic,
                   transliteration: transliteration,
                   content: content,
-                  sourceLabel: tafsir == null || tafsir.isEmpty
-                      ? 'Tambahkan assets/tafsir_id.json untuk offline'
-                      : 'Tafsir lengkap (offline)',
+                  sourceLabel: label,
+                );
+              },
+            ),
+            FutureBuilder<TafsirEntry?>(
+              future: future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return _TafsirSection(
+                    arabic: arabic,
+                    transliteration: transliteration,
+                    content: 'Gagal memuat tafsir lengkap.',
+                    sourceLabel: 'Periksa koneksi atau pilih sumber lain.',
+                  );
+                }
+                final entry = snapshot.data;
+                final content = entry?.long?.isNotEmpty == true
+                    ? entry!.long!
+                    : (entry?.short?.isNotEmpty == true
+                        ? entry!.short!
+                        : 'Tafsir lengkap belum tersedia.');
+                final label = entry?.sourceLabel ??
+                    'Tambahkan tafsir offline atau pilih sumber online.';
+                return _TafsirSection(
+                  arabic: arabic,
+                  transliteration: transliteration,
+                  content: content,
+                  sourceLabel: label,
                 );
               },
             ),
