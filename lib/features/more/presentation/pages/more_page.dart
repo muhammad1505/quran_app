@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:quran_app/features/quran/presentation/pages/murotal_download_page.dart';
+import 'package:quran_app/features/offline/presentation/pages/offline_manager_page.dart';
 import 'package:quran_app/features/settings/presentation/pages/settings_page.dart';
 
 class MorePage extends StatelessWidget {
@@ -22,7 +22,7 @@ class MorePage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const MurotalDownloadPage(),
+                  builder: (_) => const OfflineManagerPage(),
                 ),
               );
             },

@@ -445,6 +445,8 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   TranslationSource? _customTranslationSource;
   int? _highlightVerse;
   Set<String> _bookmarkKeys = {};
+  bool _isAyahMode = false;
+  int? _currentAyah;
   final QuranSettingsController _quranSettings =
       QuranSettingsController.instance;
   final AudioSettingsController _audioSettings =
@@ -458,13 +460,23 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
       initialScrollOffset: _estimateScrollOffset(widget.initialVerse),
     );
     _highlightVerse = widget.initialVerse;
-    _audioPlayer.playerStateStream.listen((state) {
+    _audioPlayer.playerStateStream.listen((state) async {
+      if (!mounted) return;
       setState(() {
         _isPlaying = state.playing;
         _isLoading =
             state.processingState == ProcessingState.loading ||
             state.processingState == ProcessingState.buffering;
       });
+      if (state.processingState == ProcessingState.completed &&
+          _isAyahMode &&
+          _audioSettings.value.autoPlayNextAyah) {
+        final next = (_currentAyah ?? 0) + 1;
+        final maxAyah = quran.getVerseCount(widget.surahNumber);
+        if (next <= maxAyah) {
+          await _playVerseAudio(next);
+        }
+      }
     });
     _quranSettings.addListener(_onSettingsChanged);
     _audioSettings.addListener(_onAudioSettingsChanged);
@@ -515,6 +527,8 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     } else {
       if (_audioPlayer.processingState == ProcessingState.idle) {
         try {
+          _isAyahMode = false;
+          _currentAyah = null;
           final qariId = _audioSettings.value.qariId;
           final localFile = await AudioCacheService.instance.getLocalSurahFile(
             widget.surahNumber,
@@ -550,6 +564,11 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
 
   Future<void> _playVerseAudio(int verseNumber) async {
     try {
+      setState(() {
+        _isAyahMode = true;
+        _currentAyah = verseNumber;
+        _highlightVerse = verseNumber;
+      });
       final qari = AudioCacheService.instance.qariById(
         _audioSettings.value.qariId,
       );
@@ -569,6 +588,21 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
           SnackBar(content: Text('Gagal memutar audio ayat: $e')),
         );
       }
+    }
+  }
+
+  Future<void> _playNextAyah() async {
+    final maxAyah = quran.getVerseCount(widget.surahNumber);
+    final next = (_currentAyah ?? 1) + 1;
+    if (next <= maxAyah) {
+      await _playVerseAudio(next);
+    }
+  }
+
+  Future<void> _playPreviousAyah() async {
+    final prev = (_currentAyah ?? 1) - 1;
+    if (prev >= 1) {
+      await _playVerseAudio(prev);
     }
   }
 
@@ -1127,11 +1161,25 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Murotal ${quran.getSurahName(widget.surahNumber)}',
+              _isAyahMode && _currentAyah != null
+                  ? 'Ayat ${_currentAyah!} • ${quran.getSurahName(widget.surahNumber)}'
+                  : 'Murotal ${quran.getSurahName(widget.surahNumber)}',
               style: Theme.of(context).textTheme.bodyMedium,
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          if (_isAyahMode) ...[
+            IconButton(
+              onPressed: _playPreviousAyah,
+              icon: const Icon(Icons.skip_previous),
+              tooltip: 'Ayat sebelumnya',
+            ),
+            IconButton(
+              onPressed: _playNextAyah,
+              icon: const Icon(Icons.skip_next),
+              tooltip: 'Ayat berikutnya',
+            ),
+          ],
           IconButton(
             onPressed: () {
               final next = !_audioSettings.value.repeatOne;
@@ -1375,40 +1423,6 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
           ],
         );
       },
-    );
-  }
-
-  void _showCreateFolderDialog() {
-    final controller = TextEditingController();
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Buat Folder'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Contoh: Hafalan',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final name = controller.text.trim();
-              if (name.isEmpty) return;
-              await BookmarkService.instance.addFolder(name);
-              if (context.mounted) {
-                Navigator.pop(context);
-                setState(() {});
-              }
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
     );
   }
 

@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/settings/prayer_settings.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
+import 'package:quran_app/features/offline/presentation/pages/offline_manager_page.dart';
 import 'package:quran_app/features/quran/presentation/pages/murotal_download_page.dart';
 import 'package:quran_app/core/services/prayer_notification_service.dart';
 
@@ -212,6 +213,29 @@ class _SettingsPageState extends State<SettingsPage> {
             value: _audioSettings.value.repeatOne,
             onChanged: (val) {
               _audioSettings.updateRepeatOne(val);
+            },
+          ),
+          SwitchListTile(
+            title: const Text("Auto-play Ayat Berikutnya"),
+            subtitle: const Text("Lanjutkan otomatis ke ayat berikutnya"),
+            value: _audioSettings.value.autoPlayNextAyah,
+            onChanged: (val) {
+              _audioSettings.updateAutoPlayNextAyah(val);
+            },
+          ),
+          const Divider(),
+          _buildSectionHeader("Offline"),
+          ListTile(
+            title: const Text("Unduhan Offline"),
+            subtitle: const Text("Kelola audio, terjemahan, dan tafsir"),
+            leading: const Icon(Icons.download_for_offline),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const OfflineManagerPage(),
+                ),
+              );
             },
           ),
           const Divider(),
