@@ -11,6 +11,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:quran_app/core/services/prayer_notification_service.dart';
 import 'package:quran_app/core/settings/prayer_settings.dart';
+import 'package:quran_app/features/settings/presentation/pages/settings_page.dart';
+
+enum ScheduleView { today, week, month }
 
 class PrayerTimesPage extends StatefulWidget {
   const PrayerTimesPage({super.key});
@@ -34,6 +37,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
   final PrayerSettingsController _prayerSettings =
       PrayerSettingsController.instance;
   Timer? _ticker;
+  ScheduleView _view = ScheduleView.today;
 
   @override
   void initState() {
@@ -171,6 +175,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     await PrayerNotificationService.instance.schedulePrayerTimes(
       today,
       tomorrow,
+      _prayerSettings.value,
     );
   }
 
@@ -179,17 +184,33 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     Coordinates coordinates,
     CalculationParameters params,
   ) {
-    final next = prayerTimes.nextPrayer();
-    final nextTime = prayerTimes.timeForPrayer(next);
-    if (next != Prayer.none && nextTime != null) {
-      return _NextPrayerInfo(next, nextTime);
+    final now = DateTime.now();
+    final offset = Duration(minutes: _prayerSettings.value.correctionMinutes);
+    final times = <Prayer, DateTime>{
+      Prayer.fajr: prayerTimes.fajr.add(offset),
+      Prayer.dhuhr: prayerTimes.dhuhr.add(offset),
+      Prayer.asr: prayerTimes.asr.add(offset),
+      Prayer.maghrib: prayerTimes.maghrib.add(offset),
+      Prayer.isha: prayerTimes.isha.add(offset),
+    };
+    for (final prayer in [
+      Prayer.fajr,
+      Prayer.dhuhr,
+      Prayer.asr,
+      Prayer.maghrib,
+      Prayer.isha,
+    ]) {
+      final time = times[prayer]!;
+      if (time.isAfter(now)) {
+        return _NextPrayerInfo(prayer, time);
+      }
     }
     final tomorrow = PrayerTimes(
       coordinates,
       DateComponents.from(DateTime.now().add(const Duration(days: 1))),
       params,
     );
-    return _NextPrayerInfo(Prayer.fajr, tomorrow.fajr);
+    return _NextPrayerInfo(Prayer.fajr, tomorrow.fajr.add(offset));
   }
 
   void _updateCountdown() {
@@ -202,6 +223,19 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       return;
     }
     setState(() => _timeRemaining = diff);
+  }
+
+  DateTime _applyOffset(DateTime time) {
+    final minutes = _prayerSettings.value.correctionMinutes;
+    return time.add(Duration(minutes: minutes));
+  }
+
+  Future<void> _refreshPrayerNotifications() async {
+    final coords = _coordinates;
+    final prayerTimes = _prayerTimes;
+    if (coords == null || prayerTimes == null) return;
+    final params = _prayerSettings.buildParameters();
+    await _scheduleNotificationsIfEnabled(prayerTimes, coords, params);
   }
 
   Future<void> _storeLastLocation(Position position) async {
@@ -246,36 +280,11 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                       const SizedBox(height: 20),
                       _buildInfoRow(),
                       const SizedBox(height: 16),
-                      _buildTimeRow(
-                        "Subuh",
-                        prayerTimes.fajr,
-                        _nextPrayer == Prayer.fajr,
-                      ),
-                      _buildTimeRow(
-                        "Syuruq",
-                        prayerTimes.sunrise,
-                        _nextPrayer == Prayer.sunrise,
-                      ),
-                      _buildTimeRow(
-                        "Dzuhur",
-                        prayerTimes.dhuhr,
-                        _nextPrayer == Prayer.dhuhr,
-                      ),
-                      _buildTimeRow(
-                        "Ashar",
-                        prayerTimes.asr,
-                        _nextPrayer == Prayer.asr,
-                      ),
-                      _buildTimeRow(
-                        "Maghrib",
-                        prayerTimes.maghrib,
-                        _nextPrayer == Prayer.maghrib,
-                      ),
-                      _buildTimeRow(
-                        "Isya",
-                        prayerTimes.isha,
-                        _nextPrayer == Prayer.isha,
-                      ),
+                      _buildViewSwitcher(),
+                      const SizedBox(height: 12),
+                      ..._buildScheduleWidgets(prayerTimes),
+                      const SizedBox(height: 16),
+                      _buildSettingsSection(),
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -293,6 +302,141 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       case Prayer.isha: return "Isya";
       default: return "-";
     }
+  }
+
+  Widget _buildViewSwitcher() {
+    return SegmentedButton<ScheduleView>(
+      segments: const [
+        ButtonSegment(value: ScheduleView.today, label: Text('Hari Ini')),
+        ButtonSegment(value: ScheduleView.week, label: Text('Mingguan')),
+        ButtonSegment(value: ScheduleView.month, label: Text('Bulanan')),
+      ],
+      selected: {_view},
+      onSelectionChanged: (value) {
+        if (value.isEmpty) return;
+        setState(() => _view = value.first);
+      },
+    );
+  }
+
+  List<Widget> _buildScheduleWidgets(PrayerTimes prayerTimes) {
+    switch (_view) {
+      case ScheduleView.today:
+        return [
+          _buildTimeRow(
+            "Subuh",
+            _applyOffset(prayerTimes.fajr),
+            _nextPrayer == Prayer.fajr,
+          ),
+          _buildTimeRow(
+            "Syuruq",
+            _applyOffset(prayerTimes.sunrise),
+            _nextPrayer == Prayer.sunrise,
+          ),
+          _buildTimeRow(
+            "Dzuhur",
+            _applyOffset(prayerTimes.dhuhr),
+            _nextPrayer == Prayer.dhuhr,
+          ),
+          _buildTimeRow(
+            "Ashar",
+            _applyOffset(prayerTimes.asr),
+            _nextPrayer == Prayer.asr,
+          ),
+          _buildTimeRow(
+            "Maghrib",
+            _applyOffset(prayerTimes.maghrib),
+            _nextPrayer == Prayer.maghrib,
+          ),
+          _buildTimeRow(
+            "Isya",
+            _applyOffset(prayerTimes.isha),
+            _nextPrayer == Prayer.isha,
+          ),
+        ];
+      case ScheduleView.week:
+        return _buildScheduleCards(7);
+      case ScheduleView.month:
+        return _buildScheduleCards(_daysInMonth(DateTime.now()));
+    }
+  }
+
+  List<Widget> _buildScheduleCards(int days) {
+    if (_coordinates == null) {
+      return [
+        Text(
+          'Lokasi belum tersedia.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ];
+    }
+    final params = _prayerSettings.buildParameters();
+    final offset = Duration(minutes: _prayerSettings.value.correctionMinutes);
+    final today = DateTime.now();
+    final start = DateTime(today.year, today.month, today.day);
+    final cards = <Widget>[];
+    for (var i = 0; i < days; i++) {
+      final date = start.add(Duration(days: i));
+      final times = PrayerTimes(
+        _coordinates!,
+        DateComponents.from(date),
+        params,
+      );
+      final schedule = _DaySchedule(
+        date: date,
+        times: {
+          Prayer.fajr: times.fajr.add(offset),
+          Prayer.dhuhr: times.dhuhr.add(offset),
+          Prayer.asr: times.asr.add(offset),
+          Prayer.maghrib: times.maghrib.add(offset),
+          Prayer.isha: times.isha.add(offset),
+        },
+      );
+      cards.add(_buildDayCard(schedule));
+    }
+    return cards;
+  }
+
+  int _daysInMonth(DateTime date) {
+    final nextMonth = DateTime(date.year, date.month + 1, 1);
+    return nextMonth.subtract(const Duration(days: 1)).day;
+  }
+
+  Widget _buildDayCard(_DaySchedule schedule) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              DateFormat('EEE, d MMM y').format(schedule.date),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _timeChip('Subuh', schedule.times[Prayer.fajr]!),
+                _timeChip('Dzuhur', schedule.times[Prayer.dhuhr]!),
+                _timeChip('Ashar', schedule.times[Prayer.asr]!),
+                _timeChip('Maghrib', schedule.times[Prayer.maghrib]!),
+                _timeChip('Isya', schedule.times[Prayer.isha]!),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _timeChip(String label, DateTime time) {
+    return Chip(
+      label: Text('$label ${DateFormat.Hm().format(time)}'),
+      backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+    );
   }
 
   Widget _buildTimeRow(String name, DateTime time, bool isNext) {
@@ -481,6 +625,230 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     );
   }
 
+  Widget _buildSettingsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Pengaturan',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        Card(
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.calculate),
+                title: const Text('Metode Perhitungan'),
+                subtitle: Text(prayerMethodLabel(_prayerSettings.value.method)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsPage()),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.tune),
+                title: const Text('Koreksi Menit'),
+                subtitle: Text(
+                  _prayerSettings.value.correctionMinutes == 0
+                      ? 'Tidak ada koreksi'
+                      : '${_prayerSettings.value.correctionMinutes > 0 ? '+' : ''}${_prayerSettings.value.correctionMinutes} menit',
+                ),
+                onTap: _showCorrectionSheet,
+              ),
+              ListTile(
+                leading: const Icon(Icons.notifications_active_outlined),
+                title: const Text('Notifikasi per Waktu'),
+                subtitle: const Text('Atur pengingat setiap sholat'),
+                onTap: _showPrayerNotificationSheet,
+              ),
+              ListTile(
+                leading: const Icon(Icons.volume_up_outlined),
+                title: const Text('Suara Adzan'),
+                subtitle: Text(_prayerSettings.value.adzanSound.label),
+                onTap: _showAdzanSheet,
+              ),
+              SwitchListTile(
+                title: const Text('Mode Silent Saat Sholat'),
+                subtitle: const Text('Matikan suara notifikasi'),
+                value: _prayerSettings.value.silentMode,
+                onChanged: (value) async {
+                  await _prayerSettings.setSilentMode(value);
+                  await _refreshPrayerNotifications();
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showCorrectionSheet() {
+    var temp = _prayerSettings.value.correctionMinutes.toDouble();
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Koreksi Menit',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      temp == 0
+                          ? '0 menit'
+                          : '${temp > 0 ? '+' : ''}${temp.toInt()} menit',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    Slider(
+                      value: temp,
+                      min: -30,
+                      max: 30,
+                      divisions: 60,
+                      label: temp.toInt().toString(),
+                      onChanged: (value) {
+                        setSheetState(() => temp = value);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await _prayerSettings
+                              .updateCorrectionMinutes(temp.toInt());
+                          if (mounted) {
+                            Navigator.pop(context);
+                          }
+                          await _refreshPrayerNotifications();
+                        },
+                        child: const Text('Simpan'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showPrayerNotificationSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                title: Text('Notifikasi per Waktu'),
+              ),
+              SwitchListTile(
+                title: const Text('Subuh'),
+                value: _prayerSettings.value.notifyFajr,
+                onChanged: (value) async {
+                  await _prayerSettings.setNotificationEnabled(
+                    Prayer.fajr,
+                    value,
+                  );
+                  await _refreshPrayerNotifications();
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Dzuhur'),
+                value: _prayerSettings.value.notifyDhuhr,
+                onChanged: (value) async {
+                  await _prayerSettings.setNotificationEnabled(
+                    Prayer.dhuhr,
+                    value,
+                  );
+                  await _refreshPrayerNotifications();
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Ashar'),
+                value: _prayerSettings.value.notifyAsr,
+                onChanged: (value) async {
+                  await _prayerSettings.setNotificationEnabled(
+                    Prayer.asr,
+                    value,
+                  );
+                  await _refreshPrayerNotifications();
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Maghrib'),
+                value: _prayerSettings.value.notifyMaghrib,
+                onChanged: (value) async {
+                  await _prayerSettings.setNotificationEnabled(
+                    Prayer.maghrib,
+                    value,
+                  );
+                  await _refreshPrayerNotifications();
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Isya'),
+                value: _prayerSettings.value.notifyIsha,
+                onChanged: (value) async {
+                  await _prayerSettings.setNotificationEnabled(
+                    Prayer.isha,
+                    value,
+                  );
+                  await _refreshPrayerNotifications();
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAdzanSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(title: Text('Pilih Suara Adzan')),
+              ...AdzanSound.values.map(
+                (sound) => RadioListTile<AdzanSound>(
+                  value: sound,
+                  groupValue: _prayerSettings.value.adzanSound,
+                  title: Text(sound.label),
+                  onChanged: (value) async {
+                    if (value == null) return;
+                    await _prayerSettings.setAdzanSound(value);
+                    if (mounted) {
+                      Navigator.pop(context);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildLoadingState() {
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -548,6 +916,16 @@ class _NextPrayerInfo {
   final DateTime time;
 
   const _NextPrayerInfo(this.prayer, this.time);
+}
+
+class _DaySchedule {
+  final DateTime date;
+  final Map<Prayer, DateTime> times;
+
+  const _DaySchedule({
+    required this.date,
+    required this.times,
+  });
 }
 
 class _ManualLocation {

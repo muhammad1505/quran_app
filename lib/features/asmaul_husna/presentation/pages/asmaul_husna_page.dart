@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:quran_app/core/services/asmaul_husna_service.dart';
+import 'package:quran_app/features/asmaul_husna/presentation/pages/asmaul_detail_page.dart';
 
 class AsmaulHusnaPage extends StatefulWidget {
   const AsmaulHusnaPage({super.key});
@@ -36,32 +37,51 @@ class _AsmaulHusnaPageState extends State<AsmaulHusnaPage> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        "Bahasa Makna",
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "Bahasa Makna",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    SegmentedButton<bool>(
-                      segments: const [
-                        ButtonSegment<bool>(
-                          value: false,
-                          label: Text('ID'),
-                        ),
-                        ButtonSegment<bool>(
-                          value: true,
-                          label: Text('EN'),
+                        SegmentedButton<bool>(
+                          segments: const [
+                            ButtonSegment<bool>(
+                              value: false,
+                              label: Text('ID'),
+                            ),
+                            ButtonSegment<bool>(
+                              value: true,
+                              label: Text('EN'),
+                            ),
+                          ],
+                          selected: {_showEnglish},
+                          onSelectionChanged: (value) {
+                            setState(() => _showEnglish = value.first);
+                          },
                         ),
                       ],
-                      selected: {_showEnglish},
-                      onSelectionChanged: (value) {
-                        setState(() => _showEnglish = value.first);
-                      },
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Putar semua segera hadir.'),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.play_circle_outline, size: 18),
+                        label: const Text('Putar semua'),
+                      ),
                     ),
                   ],
                 ),
@@ -74,78 +94,94 @@ class _AsmaulHusnaPageState extends State<AsmaulHusnaPage> {
                     final item = items[index];
                     final meaning =
                         _showEnglish ? item.meaningEn : item.meaningId;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardTheme.color ?? Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border:
-                            Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .primaryColor
-                                  .withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AsmaulDetailPage(
+                              item: item,
+                              showEnglish: _showEnglish,
                             ),
-                            child: Text(
-                              item.number.toString(),
-                              style: TextStyle(
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.bold,
+                          ),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              Theme.of(context).cardTheme.color ?? Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.grey.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .primaryColor
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                item.number.toString(),
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.arabic,
-                                  textAlign: TextAlign.left,
-                                  style: GoogleFonts.amiri(
-                                    fontSize: 24,
-                                    height: 1.6,
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .bodyLarge
-                                        ?.color,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  item.transliteration,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 13,
-                                    color: Colors.grey[700],
-                                  ),
-                                ),
-                                if (meaning.isNotEmpty) ...[
-                                  const SizedBox(height: 6),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Text(
-                                    meaning,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
+                                    item.arabic,
+                                    textAlign: TextAlign.left,
+                                    style: GoogleFonts.amiri(
+                                      fontSize: 24,
+                                      height: 1.6,
+                                      color: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.color,
                                     ),
                                   ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    item.transliteration,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  if (meaning.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      meaning,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   },

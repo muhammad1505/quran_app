@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -18,6 +19,7 @@ import 'package:quran_app/core/services/translation_service.dart';
 import 'package:quran_app/core/services/word_by_word_service.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
+import 'package:quran_app/core/settings/theme_settings.dart';
 import 'package:quran_app/features/quran/presentation/pages/tafsir_page.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -30,7 +32,14 @@ class QuranPage extends StatefulWidget {
 
 class _QuranPageState extends State<QuranPage> {
   final TextEditingController _searchController = TextEditingController();
+  final QuranSettingsController _quranSettings =
+      QuranSettingsController.instance;
   String _query = '';
+  Timer? _searchDebounce;
+  Set<int> _translationMatches = {};
+  bool _isSearchingTranslation = false;
+  Map<String, String>? _translationSearchMap;
+  TranslationSource? _translationSearchSource;
   bool _showNotesOnly = false;
   String? _selectedFolderId;
   final List<_JuzStart> _juzStarts = const [
@@ -67,9 +76,30 @@ class _QuranPageState extends State<QuranPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _quranSettings.load();
+    _quranSettings.addListener(_onSettingsChanged);
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
+    _searchDebounce?.cancel();
+    _quranSettings.removeListener(_onSettingsChanged);
     super.dispose();
+  }
+
+  void _onSettingsChanged() {
+    if (_query.trim().length >= 3) {
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 100), () async {
+        await _searchTranslations(_query);
+      });
+    }
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   List<int> _filteredSurahNumbers() {
@@ -77,10 +107,123 @@ class _QuranPageState extends State<QuranPage> {
       return List<int>.generate(114, (index) => index + 1);
     }
     final normalized = _query.toLowerCase().trim();
+    final translationMatches = _translationMatches;
     return List<int>.generate(114, (index) => index + 1).where((surah) {
       final name = quran.getSurahName(surah).toLowerCase();
-      return name.contains(normalized) || surah.toString() == normalized;
+      return name.contains(normalized) ||
+          surah.toString() == normalized ||
+          translationMatches.contains(surah);
     }).toList();
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() => _query = value);
+    _searchDebounce?.cancel();
+    final normalized = value.trim();
+    if (normalized.length < 3) {
+      setState(() {
+        _translationMatches = {};
+        _isSearchingTranslation = false;
+      });
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () async {
+      await _searchTranslations(normalized);
+    });
+  }
+
+  Future<void> _searchTranslations(String query) async {
+    if (!mounted) return;
+    setState(() => _isSearchingTranslation = true);
+    final normalized = query.toLowerCase();
+    final source = _quranSettings.value.translation;
+    final needsAsset = TranslationAssetService.instance.requiresAsset(source);
+    Map<String, String>? map;
+    if (needsAsset) {
+      if (_translationSearchSource != source || _translationSearchMap == null) {
+        map = await TranslationAssetService.instance.load(source);
+        _translationSearchMap = map;
+        _translationSearchSource = source;
+      } else {
+        map = _translationSearchMap;
+      }
+    }
+    final matches = <int>{};
+    if (needsAsset && map != null) {
+      for (final entry in map.entries) {
+        if (entry.value.toLowerCase().contains(normalized)) {
+          final surah = int.tryParse(entry.key.split(':').first);
+          if (surah != null) {
+            matches.add(surah);
+          }
+        }
+      }
+    } else {
+      for (var surah = 1; surah <= 114; surah++) {
+        final verses = quran.getVerseCount(surah);
+        for (var ayah = 1; ayah <= verses; ayah++) {
+          final translation = _translationForSearch(source, surah, ayah);
+          if (translation.toLowerCase().contains(normalized)) {
+            matches.add(surah);
+            break;
+          }
+        }
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _translationMatches = matches;
+      _isSearchingTranslation = false;
+    });
+  }
+
+  String _translationForSearch(
+    TranslationSource source,
+    int surah,
+    int ayah,
+  ) {
+    if (TranslationAssetService.instance.requiresAsset(source) &&
+        _translationSearchMap != null) {
+      return _sanitizeTranslation(
+        _translationSearchMap!['$surah:$ayah'] ?? '',
+      );
+    }
+    if (source == TranslationSource.enSaheeh) {
+      return _sanitizeTranslation(
+        AlQuran.translation(
+          TranslationType.enSahihInternational,
+          surah,
+          ayah,
+          translation: quran.Translation.enSaheeh,
+        ),
+      );
+    }
+    return _sanitizeTranslation(
+      AlQuran.translation(
+        _translationType(source),
+        surah,
+        ayah,
+      ),
+    );
+  }
+
+  TranslationType _translationType(TranslationSource source) {
+    switch (source) {
+      case TranslationSource.idKemenag:
+        return TranslationType.idIndonesianIslamicAffairsMinistry;
+      case TranslationSource.idKingFahad:
+        return TranslationType.idKingFahd;
+      case TranslationSource.idSabiq:
+        return TranslationType.idSabiqCompany;
+      case TranslationSource.enAbdelHaleem:
+        return TranslationType.enAbdelHaleem;
+      case TranslationSource.enSaheeh:
+        return TranslationType.enSahihInternational;
+    }
+  }
+
+  String _sanitizeTranslation(String input) {
+    return input.replaceAll(RegExp(r'<[^>]*>'), '').trim();
   }
 
   @override
@@ -104,7 +247,7 @@ class _QuranPageState extends State<QuranPage> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: TextField(
                 controller: _searchController,
-                onChanged: (value) => setState(() => _query = value),
+                onChanged: _onSearchChanged,
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search),
                   hintText: 'Cari surah, juz, atau kata terjemahan…',
@@ -123,6 +266,11 @@ class _QuranPageState extends State<QuranPage> {
                 ),
               ),
             ),
+            if (_isSearchingTranslation)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: LinearProgressIndicator(minHeight: 2),
+              ),
             Expanded(
               child: TabBarView(
                 children: [
@@ -208,12 +356,19 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Widget _buildJuzList(BuildContext context) {
+    final normalized = _query.toLowerCase().trim();
+    final filtered = _juzStarts.where((start) {
+      if (normalized.isEmpty) return true;
+      final juz = _juzStarts.indexOf(start) + 1;
+      final label = 'juz $juz';
+      return label.contains(normalized) || juz.toString() == normalized;
+    }).toList();
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      itemCount: _juzStarts.length,
+      itemCount: filtered.length,
       itemBuilder: (context, index) {
-        final juz = index + 1;
-        final start = _juzStarts[index];
+        final start = filtered[index];
+        final juz = _juzStarts.indexOf(start) + 1;
         final surahName = quran.getSurahName(start.surah);
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -451,6 +606,8 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
       QuranSettingsController.instance;
   final AudioSettingsController _audioSettings =
       AudioSettingsController.instance;
+  final ThemeSettingsController _themeSettings =
+      ThemeSettingsController.instance;
 
   @override
   void initState() {
@@ -480,8 +637,10 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     });
     _quranSettings.addListener(_onSettingsChanged);
     _audioSettings.addListener(_onAudioSettingsChanged);
+    _themeSettings.addListener(_onSettingsChanged);
     _quranSettings.load();
     _audioSettings.load();
+    _themeSettings.load();
     _refreshDownloadStatus();
     _maybeLoadCustomTranslation();
     _loadBookmarks();
@@ -491,6 +650,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   void dispose() {
     _quranSettings.removeListener(_onSettingsChanged);
     _audioSettings.removeListener(_onAudioSettingsChanged);
+    _themeSettings.removeListener(_onSettingsChanged);
     _audioPlayer.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -883,11 +1043,11 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return AnimatedBuilder(
-          animation: _quranSettings,
-          builder: (context, _) {
-            final settings = _quranSettings.value;
-            return SafeArea(
+    return AnimatedBuilder(
+      animation: Listenable.merge([_quranSettings, _themeSettings]),
+      builder: (context, _) {
+        final settings = _quranSettings.value;
+        return SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 child: Column(
@@ -940,6 +1100,14 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                       onChanged: (value) =>
                           _quranSettings.setArabicLineHeight(value),
                     ),
+                    _buildSlider(
+                      label: 'Spasi Baris Terjemahan',
+                      value: settings.translationLineHeight,
+                      min: 1.2,
+                      max: 2.2,
+                      onChanged: (value) =>
+                          _quranSettings.setTranslationLineHeight(value),
+                    ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<ArabicFontFamily>(
                       initialValue: settings.arabicFontFamily,
@@ -978,6 +1146,8 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                       onChanged: (value) =>
                           _quranSettings.setShowWordByWord(value),
                     ),
+                    const Divider(height: 24),
+                    _buildThemeSelector(),
                   ],
                 ),
               ),
@@ -985,6 +1155,31 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildThemeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Mode Tema',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 8),
+        SegmentedButton<AppThemeMode>(
+          segments: const [
+            ButtonSegment(value: AppThemeMode.light, label: Text('Terang')),
+            ButtonSegment(value: AppThemeMode.dark, label: Text('Gelap')),
+            ButtonSegment(value: AppThemeMode.sepia, label: Text('Sepia')),
+          ],
+          selected: {_themeSettings.value.mode},
+          onSelectionChanged: (value) {
+            if (value.isEmpty) return;
+            _themeSettings.setThemeMode(value.first);
+          },
+        ),
+      ],
     );
   }
 
@@ -1875,7 +2070,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                                   12,
                                   settings.translationFontSize - 2,
                                 ),
-                                height: 1.6,
+                                height: settings.translationLineHeight,
                                 color: Colors.grey[600],
                               ),
                             ),
@@ -1886,7 +2081,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                           textAlign: TextAlign.left,
                           style: GoogleFonts.poppins(
                             fontSize: settings.translationFontSize,
-                            height: 1.6,
+                            height: settings.translationLineHeight,
                             color: Colors.grey[600],
                           ),
                         ),

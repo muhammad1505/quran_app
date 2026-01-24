@@ -2,6 +2,7 @@ import 'package:adhan/adhan.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:quran_app/core/settings/prayer_settings.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -79,12 +80,14 @@ class PrayerNotificationService {
   Future<void> schedulePrayerTimes(
     PrayerTimes today,
     PrayerTimes tomorrow,
+    PrayerSettings settings,
   ) async {
     await initialize();
     await requestPermissions();
     await cancelAll();
 
     final now = DateTime.now();
+    final offset = Duration(minutes: settings.correctionMinutes);
     final prayers = <Prayer, DateTime>{
       Prayer.fajr: today.fajr,
       Prayer.dhuhr: today.dhuhr,
@@ -102,33 +105,40 @@ class PrayerNotificationService {
 
     for (final entry in prayers.entries) {
       final prayer = entry.key;
+      if (!settings.isNotificationEnabled(prayer)) {
+        continue;
+      }
       var time = entry.value;
       if (time.isBefore(now)) {
         time = prayersTomorrow[prayer]!;
       }
-      await _scheduleNotification(prayer, time);
+      await _scheduleNotification(prayer, time.add(offset), settings);
     }
   }
 
-  Future<void> _scheduleNotification(Prayer prayer, DateTime time) async {
+  Future<void> _scheduleNotification(
+    Prayer prayer,
+    DateTime time,
+    PrayerSettings settings,
+  ) async {
     final id = _notificationId(prayer);
     final title = 'Waktu ${_prayerName(prayer)}';
     final body = 'Saatnya sholat ${_prayerName(prayer)}';
     final scheduled = tz.TZDateTime.from(time, tz.local);
 
-    const androidDetails = AndroidNotificationDetails(
+    final androidDetails = AndroidNotificationDetails(
       'prayer_times',
       'Jadwal Sholat',
       channelDescription: 'Pengingat waktu sholat harian',
       importance: Importance.high,
       priority: Priority.high,
-      playSound: true,
+      playSound: !settings.silentMode,
     );
-    const iosDetails = DarwinNotificationDetails(
+    final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
-      presentSound: true,
+      presentSound: !settings.silentMode,
     );
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );

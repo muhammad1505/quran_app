@@ -82,6 +82,7 @@ class QuranSettings {
   final double arabicFontSize;
   final double translationFontSize;
   final double arabicLineHeight;
+  final double translationLineHeight;
   final ArabicFontFamily arabicFontFamily;
   final TafsirSource tafsirSource;
 
@@ -93,6 +94,7 @@ class QuranSettings {
     this.arabicFontSize = 32,
     this.translationFontSize = 16,
     this.arabicLineHeight = 2.0,
+    this.translationLineHeight = 1.6,
     this.arabicFontFamily = ArabicFontFamily.amiri,
     this.tafsirSource = TafsirSource.equran,
   });
@@ -105,6 +107,7 @@ class QuranSettings {
     double? arabicFontSize,
     double? translationFontSize,
     double? arabicLineHeight,
+    double? translationLineHeight,
     ArabicFontFamily? arabicFontFamily,
     TafsirSource? tafsirSource,
   }) {
@@ -116,6 +119,8 @@ class QuranSettings {
       arabicFontSize: arabicFontSize ?? this.arabicFontSize,
       translationFontSize: translationFontSize ?? this.translationFontSize,
       arabicLineHeight: arabicLineHeight ?? this.arabicLineHeight,
+      translationLineHeight:
+          translationLineHeight ?? this.translationLineHeight,
       arabicFontFamily: arabicFontFamily ?? this.arabicFontFamily,
       tafsirSource: tafsirSource ?? this.tafsirSource,
     );
@@ -130,6 +135,7 @@ class QuranSettingsController extends ChangeNotifier {
   static const _arabicFontSizeKey = 'arabic_font_size';
   static const _translationFontSizeKey = 'translation_font_size';
   static const _arabicLineHeightKey = 'arabic_line_height';
+  static const _translationLineHeightKey = 'translation_line_height';
   static const _arabicFontKey = 'arabic_font_family';
   static const _tafsirSourceKey = 'tafsir_source';
 
@@ -151,6 +157,8 @@ class QuranSettingsController extends ChangeNotifier {
       arabicFontSize: prefs.getDouble(_arabicFontSizeKey) ?? 32,
       translationFontSize: prefs.getDouble(_translationFontSizeKey) ?? 16,
       arabicLineHeight: prefs.getDouble(_arabicLineHeightKey) ?? 2.0,
+      translationLineHeight:
+          prefs.getDouble(_translationLineHeightKey) ?? 1.6,
       arabicFontFamily: _parseArabicFont(prefs.getString(_arabicFontKey)),
       tafsirSource: _parseTafsirSource(prefs.getString(_tafsirSourceKey)),
     );
@@ -204,6 +212,13 @@ class QuranSettingsController extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_arabicLineHeightKey, height);
+  }
+
+  Future<void> setTranslationLineHeight(double height) async {
+    _value = _value.copyWith(translationLineHeight: height);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_translationLineHeightKey, height);
   }
 
   Future<void> setArabicFontFamily(ArabicFontFamily family) async {

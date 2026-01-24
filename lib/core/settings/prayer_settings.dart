@@ -20,22 +20,86 @@ enum PrayerCalculationMethod {
 
 enum PrayerMadhab { shafi, hanafi }
 
+enum AdzanSound { defaultTone, makkah, madinah }
+
+extension AdzanSoundExtension on AdzanSound {
+  String get label {
+    switch (this) {
+      case AdzanSound.defaultTone:
+        return 'Default';
+      case AdzanSound.makkah:
+        return 'Makkah';
+      case AdzanSound.madinah:
+        return 'Madinah';
+    }
+  }
+}
+
 class PrayerSettings {
   final PrayerCalculationMethod method;
   final PrayerMadhab madhab;
+  final int correctionMinutes;
+  final bool notifyFajr;
+  final bool notifyDhuhr;
+  final bool notifyAsr;
+  final bool notifyMaghrib;
+  final bool notifyIsha;
+  final bool silentMode;
+  final AdzanSound adzanSound;
 
   const PrayerSettings({
     this.method = PrayerCalculationMethod.kemenagMabims,
     this.madhab = PrayerMadhab.shafi,
+    this.correctionMinutes = 0,
+    this.notifyFajr = true,
+    this.notifyDhuhr = true,
+    this.notifyAsr = true,
+    this.notifyMaghrib = true,
+    this.notifyIsha = true,
+    this.silentMode = false,
+    this.adzanSound = AdzanSound.defaultTone,
   });
+
+  bool isNotificationEnabled(Prayer prayer) {
+    switch (prayer) {
+      case Prayer.fajr:
+        return notifyFajr;
+      case Prayer.dhuhr:
+        return notifyDhuhr;
+      case Prayer.asr:
+        return notifyAsr;
+      case Prayer.maghrib:
+        return notifyMaghrib;
+      case Prayer.isha:
+        return notifyIsha;
+      default:
+        return true;
+    }
+  }
 
   PrayerSettings copyWith({
     PrayerCalculationMethod? method,
     PrayerMadhab? madhab,
+    int? correctionMinutes,
+    bool? notifyFajr,
+    bool? notifyDhuhr,
+    bool? notifyAsr,
+    bool? notifyMaghrib,
+    bool? notifyIsha,
+    bool? silentMode,
+    AdzanSound? adzanSound,
   }) {
     return PrayerSettings(
       method: method ?? this.method,
       madhab: madhab ?? this.madhab,
+      correctionMinutes: correctionMinutes ?? this.correctionMinutes,
+      notifyFajr: notifyFajr ?? this.notifyFajr,
+      notifyDhuhr: notifyDhuhr ?? this.notifyDhuhr,
+      notifyAsr: notifyAsr ?? this.notifyAsr,
+      notifyMaghrib: notifyMaghrib ?? this.notifyMaghrib,
+      notifyIsha: notifyIsha ?? this.notifyIsha,
+      silentMode: silentMode ?? this.silentMode,
+      adzanSound: adzanSound ?? this.adzanSound,
     );
   }
 }
@@ -43,6 +107,14 @@ class PrayerSettings {
 class PrayerSettingsController extends ChangeNotifier {
   static const _methodKey = 'prayer_method';
   static const _madhabKey = 'prayer_madhab';
+  static const _correctionKey = 'prayer_correction_minutes';
+  static const _notifyFajrKey = 'notify_fajr';
+  static const _notifyDhuhrKey = 'notify_dhuhr';
+  static const _notifyAsrKey = 'notify_asr';
+  static const _notifyMaghribKey = 'notify_maghrib';
+  static const _notifyIshaKey = 'notify_isha';
+  static const _silentModeKey = 'prayer_silent_mode';
+  static const _adzanSoundKey = 'prayer_adzan_sound';
 
   PrayerSettingsController._();
 
@@ -56,6 +128,14 @@ class PrayerSettingsController extends ChangeNotifier {
     _value = _value.copyWith(
       method: _parseMethod(prefs.getString(_methodKey)),
       madhab: _parseMadhab(prefs.getString(_madhabKey)),
+      correctionMinutes: prefs.getInt(_correctionKey) ?? 0,
+      notifyFajr: prefs.getBool(_notifyFajrKey) ?? true,
+      notifyDhuhr: prefs.getBool(_notifyDhuhrKey) ?? true,
+      notifyAsr: prefs.getBool(_notifyAsrKey) ?? true,
+      notifyMaghrib: prefs.getBool(_notifyMaghribKey) ?? true,
+      notifyIsha: prefs.getBool(_notifyIshaKey) ?? true,
+      silentMode: prefs.getBool(_silentModeKey) ?? false,
+      adzanSound: _parseAdzanSound(prefs.getString(_adzanSoundKey)),
     );
     notifyListeners();
   }
@@ -72,6 +152,87 @@ class PrayerSettingsController extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_madhabKey, madhab.name);
+  }
+
+  Future<void> updateCorrectionMinutes(int minutes) async {
+    _value = _value.copyWith(correctionMinutes: minutes);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_correctionKey, minutes);
+  }
+
+  Future<void> setNotificationEnabled(Prayer prayer, bool enabled) async {
+    switch (prayer) {
+      case Prayer.fajr:
+        _value = _value.copyWith(notifyFajr: enabled);
+        break;
+      case Prayer.dhuhr:
+        _value = _value.copyWith(notifyDhuhr: enabled);
+        break;
+      case Prayer.asr:
+        _value = _value.copyWith(notifyAsr: enabled);
+        break;
+      case Prayer.maghrib:
+        _value = _value.copyWith(notifyMaghrib: enabled);
+        break;
+      case Prayer.isha:
+        _value = _value.copyWith(notifyIsha: enabled);
+        break;
+      default:
+        return;
+    }
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    switch (prayer) {
+      case Prayer.fajr:
+        await prefs.setBool(_notifyFajrKey, enabled);
+        break;
+      case Prayer.dhuhr:
+        await prefs.setBool(_notifyDhuhrKey, enabled);
+        break;
+      case Prayer.asr:
+        await prefs.setBool(_notifyAsrKey, enabled);
+        break;
+      case Prayer.maghrib:
+        await prefs.setBool(_notifyMaghribKey, enabled);
+        break;
+      case Prayer.isha:
+        await prefs.setBool(_notifyIshaKey, enabled);
+        break;
+      default:
+        break;
+    }
+  }
+
+  Future<void> setSilentMode(bool enabled) async {
+    _value = _value.copyWith(silentMode: enabled);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_silentModeKey, enabled);
+  }
+
+  Future<void> setAdzanSound(AdzanSound sound) async {
+    _value = _value.copyWith(adzanSound: sound);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_adzanSoundKey, sound.name);
+  }
+
+  bool isNotificationEnabled(Prayer prayer) {
+    switch (prayer) {
+      case Prayer.fajr:
+        return _value.notifyFajr;
+      case Prayer.dhuhr:
+        return _value.notifyDhuhr;
+      case Prayer.asr:
+        return _value.notifyAsr;
+      case Prayer.maghrib:
+        return _value.notifyMaghrib;
+      case Prayer.isha:
+        return _value.notifyIsha;
+      default:
+        return true;
+    }
   }
 
   CalculationParameters buildParameters() {
@@ -95,6 +256,14 @@ class PrayerSettingsController extends ChangeNotifier {
     return PrayerMadhab.values.firstWhere(
       (madhab) => madhab.name == raw,
       orElse: () => PrayerMadhab.shafi,
+    );
+  }
+
+  AdzanSound _parseAdzanSound(String? raw) {
+    if (raw == null) return AdzanSound.defaultTone;
+    return AdzanSound.values.firstWhere(
+      (sound) => sound.name == raw,
+      orElse: () => AdzanSound.defaultTone,
     );
   }
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:quran_app/features/more/presentation/pages/articles_page.dart';
+import 'package:quran_app/features/more/presentation/pages/tafsir_hub_page.dart';
 import 'package:quran_app/features/offline/presentation/pages/offline_manager_page.dart';
 import 'package:quran_app/features/settings/presentation/pages/settings_page.dart';
 
@@ -31,15 +33,25 @@ class MorePage extends StatelessWidget {
             context,
             icon: Icons.menu_book,
             title: 'Tafsir',
-            subtitle: 'Ringkas & lengkap (segera hadir)',
-            onTap: () => _comingSoon(context),
+            subtitle: 'Ringkas & lengkap',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TafsirHubPage()),
+              );
+            },
           ),
           _buildTile(
             context,
             icon: Icons.article_outlined,
             title: 'Artikel Panduan',
-            subtitle: 'Wudhu, tayammum, adab (segera hadir)',
-            onTap: () => _comingSoon(context),
+            subtitle: 'Wudhu, tayammum, adab',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ArticlesPage()),
+              );
+            },
           ),
           _buildTile(
             context,

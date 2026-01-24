@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:quran_app/core/services/asmaul_husna_service.dart';
+import 'package:quran_app/features/asmaul_husna/presentation/pages/asmaul_detail_page.dart';
 
 class DoaPage extends StatefulWidget {
   const DoaPage({super.key});
@@ -15,32 +16,42 @@ class _DoaPageState extends State<DoaPage> {
     _DoaItem(
       title: 'Doa Pagi',
       arabic: 'اَللّٰهُمَّ بِكَ أَصْبَحْنَا وَبِكَ أَمْسَيْنَا',
+      latin: 'Allahumma bika asbahna wa bika amsayna.',
       translation: 'Ya Allah, dengan-Mu kami memasuki pagi dan dengan-Mu kami memasuki petang.',
       category: 'Pagi',
+      source: 'HR. Abu Dawud',
     ),
     _DoaItem(
       title: 'Doa Petang',
       arabic: 'اَللّٰهُمَّ بِكَ أَمْسَيْنَا وَبِكَ أَصْبَحْنَا',
+      latin: 'Allahumma bika amsayna wa bika asbahna.',
       translation: 'Ya Allah, dengan-Mu kami memasuki petang dan dengan-Mu kami memasuki pagi.',
       category: 'Malam',
+      source: 'HR. Abu Dawud',
     ),
     _DoaItem(
       title: 'Doa Masuk Masjid',
       arabic: 'اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ',
+      latin: 'Allahummaftah li abwaba rahmatik.',
       translation: 'Ya Allah, bukakanlah untukku pintu-pintu rahmat-Mu.',
       category: 'Masjid',
+      source: 'HR. Muslim',
     ),
     _DoaItem(
       title: 'Doa Keluar Masjid',
       arabic: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ',
+      latin: 'Allahumma inni as\'aluka min fadhlik.',
       translation: 'Ya Allah, sesungguhnya aku memohon keutamaan dari-Mu.',
       category: 'Masjid',
+      source: 'HR. Muslim',
     ),
     _DoaItem(
       title: 'Doa Sebelum Makan',
       arabic: 'اللَّهُمَّ بَارِكْ لَنَا فِيمَا رَزَقْتَنَا',
+      latin: 'Allahumma barik lana fima razaqtana.',
       translation: 'Ya Allah, berkahilah rezeki yang Engkau berikan kepada kami.',
       category: 'Makan',
+      source: 'HR. Tirmidzi',
     ),
   ];
 
@@ -65,7 +76,16 @@ class _DoaPageState extends State<DoaPage> {
     ),
   ];
 
+  late final List<_DzikirProgress> _dzikirProgress;
+
   String _selectedCategory = 'Semua';
+
+  @override
+  void initState() {
+    super.initState();
+    _dzikirProgress =
+        List.generate(_dzikirItems.length, (_) => _DzikirProgress());
+  }
 
   List<String> get _categories {
     final unique = _doas.map((e) => e.category).toSet().toList()..sort();
@@ -76,6 +96,9 @@ class _DoaPageState extends State<DoaPage> {
     if (_selectedCategory == 'Semua') return _doas;
     return _doas.where((doa) => doa.category == _selectedCategory).toList();
   }
+
+  int get _completedDzikir =>
+      _dzikirProgress.where((item) => item.completed).length;
 
   @override
   Widget build(BuildContext context) {
@@ -133,71 +156,100 @@ class _DoaPageState extends State<DoaPage> {
   Widget _buildDoaCard(BuildContext context, _DoaItem doa) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    doa.title,
-                    style: Theme.of(context).textTheme.titleMedium,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => DoaDetailPage(doa: doa)),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      doa.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                   ),
-                ),
-                Chip(label: Text(doa.category)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              doa.arabic,
-              textAlign: TextAlign.right,
-              style: GoogleFonts.amiri(fontSize: 26, height: 1.9),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              doa.translation,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                TextButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Disimpan ke favorit.')),
-                    );
-                  },
-                  icon: const Icon(Icons.bookmark_border, size: 18),
-                  label: const Text('Simpan'),
-                ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Bagikan segera hadir.')),
-                    );
-                  },
-                  icon: const Icon(Icons.share_outlined, size: 18),
-                  label: const Text('Bagikan'),
-                ),
-              ],
-            ),
-          ],
+                  Chip(label: Text(doa.category)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                doa.arabic,
+                textAlign: TextAlign.right,
+                style: GoogleFonts.amiri(fontSize: 26, height: 1.9),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                doa.translation,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Disimpan ke favorit.')),
+                      );
+                    },
+                    icon: const Icon(Icons.bookmark_border, size: 18),
+                    label: const Text('Simpan'),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Bagikan segera hadir.')),
+                      );
+                    },
+                    icon: const Icon(Icons.share_outlined, size: 18),
+                    label: const Text('Bagikan'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildDzikirTab(BuildContext context) {
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.all(16),
-      itemCount: _dzikirItems.length,
-      itemBuilder: (context, index) {
-        final item = _dzikirItems[index];
-        return _DzikirCard(item: item);
-      },
+      children: [
+        Row(
+          children: [
+            Text(
+              'Progress',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const Spacer(),
+            Text('$_completedDzikir/${_dzikirItems.length} selesai'),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ..._dzikirItems.asMap().entries.map((entry) {
+          final index = entry.key;
+          final item = entry.value;
+          final progress = _dzikirProgress[index];
+          return _DzikirCard(
+            item: item,
+            progress: progress,
+            onChanged: (updated) {
+              setState(() => _dzikirProgress[index] = updated);
+            },
+          );
+        }),
+      ],
     );
   }
 
@@ -217,23 +269,50 @@ class _DoaPageState extends State<DoaPage> {
             ),
           );
         }
-        return ListView.builder(
+        return ListView(
           padding: const EdgeInsets.all(16),
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                title: Text(item.transliteration),
-                subtitle: Text(item.meaningId),
-                trailing: Text(
-                  item.arabic,
-                  style: GoogleFonts.amiri(fontSize: 22),
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Asmaul Husna',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-              ),
-            );
-          },
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Putar semua segera hadir.')),
+                    );
+                  },
+                  icon: const Icon(Icons.play_circle_outline, size: 18),
+                  label: const Text('Putar semua'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...items.map((item) {
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AsmaulDetailPage(item: item),
+                      ),
+                    );
+                  },
+                  title: Text(item.transliteration),
+                  subtitle: Text(item.meaningId),
+                  trailing: Text(
+                    item.arabic,
+                    style: GoogleFonts.amiri(fontSize: 22),
+                  ),
+                ),
+              );
+            }),
+          ],
         );
       },
     );
@@ -243,14 +322,18 @@ class _DoaPageState extends State<DoaPage> {
 class _DoaItem {
   final String title;
   final String arabic;
+  final String latin;
   final String translation;
   final String category;
+  final String source;
 
   const _DoaItem({
     required this.title,
     required this.arabic,
+    this.latin = '',
     required this.translation,
     required this.category,
+    this.source = '',
   });
 }
 
@@ -268,22 +351,91 @@ class _DzikirItem {
   });
 }
 
-class _DzikirCard extends StatefulWidget {
-  final _DzikirItem item;
+class DoaDetailPage extends StatelessWidget {
+  final _DoaItem doa;
 
-  const _DzikirCard({required this.item});
-
-  @override
-  State<_DzikirCard> createState() => _DzikirCardState();
-}
-
-class _DzikirCardState extends State<_DzikirCard> {
-  int _count = 0;
+  const DoaDetailPage({super.key, required this.doa});
 
   @override
   Widget build(BuildContext context) {
-    final item = widget.item;
-    final progress = (_count / item.target).clamp(0.0, 1.0);
+    return Scaffold(
+      appBar: AppBar(title: Text(doa.title)),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Text(
+            doa.arabic,
+            textAlign: TextAlign.right,
+            style: GoogleFonts.amiri(fontSize: 32, height: 1.8),
+          ),
+          if (doa.latin.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              doa.latin,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
+          const SizedBox(height: 12),
+          Text(
+            doa.translation,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          if (doa.source.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Sumber: ${doa.source}',
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+          ],
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Audio doa segera hadir.')),
+                    );
+                  },
+                  icon: const Icon(Icons.play_arrow),
+                  label: const Text('Audio'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Bagikan segera hadir.')),
+                    );
+                  },
+                  icon: const Icon(Icons.share_outlined),
+                  label: const Text('Bagikan'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DzikirCard extends StatelessWidget {
+  final _DzikirItem item;
+  final _DzikirProgress progress;
+  final ValueChanged<_DzikirProgress> onChanged;
+
+  const _DzikirCard({
+    required this.item,
+    required this.progress,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final current = progress.count;
+    final percent = (current / item.target).clamp(0.0, 1.0);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -291,7 +443,22 @@ class _DzikirCardState extends State<_DzikirCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(item.title, style: Theme.of(context).textTheme.titleMedium),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                Checkbox(
+                  value: progress.completed,
+                  onChanged: (value) {
+                    onChanged(progress.copyWith(completed: value ?? false));
+                  },
+                ),
+              ],
+            ),
             const SizedBox(height: 6),
             Text(
               item.arabic,
@@ -301,28 +468,42 @@ class _DzikirCardState extends State<_DzikirCard> {
             const SizedBox(height: 6),
             Text(item.translation),
             const SizedBox(height: 12),
-            LinearProgressIndicator(value: progress),
+            LinearProgressIndicator(value: percent),
             const SizedBox(height: 12),
             Row(
               children: [
-                Text('$_count / ${item.target}'),
+                Text('$current / ${item.target}'),
                 const Spacer(),
                 IconButton(
-                  onPressed: () {
-                    if (_count > 0) {
-                      setState(() => _count -= 1);
-                    }
-                  },
+                  onPressed: current > 0
+                      ? () {
+                          final next = current - 1;
+                          onChanged(
+                            progress.copyWith(
+                              count: next,
+                              completed: next >= item.target,
+                            ),
+                          );
+                        }
+                      : null,
                   icon: const Icon(Icons.remove_circle_outline),
                 ),
                 IconButton(
                   onPressed: () {
-                    setState(() => _count += 1);
+                    final next = current + 1;
+                    onChanged(
+                      progress.copyWith(
+                        count: next,
+                        completed: next >= item.target,
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.add_circle_outline),
                 ),
                 TextButton(
-                  onPressed: () => setState(() => _count = 0),
+                  onPressed: () {
+                    onChanged(progress.copyWith(count: 0, completed: false));
+                  },
                   child: const Text('Reset'),
                 ),
               ],
@@ -330,6 +511,20 @@ class _DzikirCardState extends State<_DzikirCard> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DzikirProgress {
+  final int count;
+  final bool completed;
+
+  const _DzikirProgress({this.count = 0, this.completed = false});
+
+  _DzikirProgress copyWith({int? count, bool? completed}) {
+    return _DzikirProgress(
+      count: count ?? this.count,
+      completed: completed ?? this.completed,
     );
   }
 }

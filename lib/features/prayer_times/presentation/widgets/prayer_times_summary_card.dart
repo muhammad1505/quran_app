@@ -160,17 +160,33 @@ class _PrayerTimesSummaryCardState extends State<PrayerTimesSummaryCard> {
     Coordinates coordinates,
     CalculationParameters params,
   ) {
-    final next = prayerTimes.nextPrayer();
-    final nextTime = prayerTimes.timeForPrayer(next);
-    if (next != Prayer.none && nextTime != null) {
-      return _NextPrayerInfo(next, nextTime);
+    final now = DateTime.now();
+    final offset = Duration(minutes: _prayerSettings.value.correctionMinutes);
+    final times = <Prayer, DateTime>{
+      Prayer.fajr: prayerTimes.fajr.add(offset),
+      Prayer.dhuhr: prayerTimes.dhuhr.add(offset),
+      Prayer.asr: prayerTimes.asr.add(offset),
+      Prayer.maghrib: prayerTimes.maghrib.add(offset),
+      Prayer.isha: prayerTimes.isha.add(offset),
+    };
+    for (final prayer in [
+      Prayer.fajr,
+      Prayer.dhuhr,
+      Prayer.asr,
+      Prayer.maghrib,
+      Prayer.isha,
+    ]) {
+      final time = times[prayer]!;
+      if (time.isAfter(now)) {
+        return _NextPrayerInfo(prayer, time);
+      }
     }
     final tomorrow = PrayerTimes(
       coordinates,
       DateComponents.from(DateTime.now().add(const Duration(days: 1))),
       params,
     );
-    return _NextPrayerInfo(Prayer.fajr, tomorrow.fajr);
+    return _NextPrayerInfo(Prayer.fajr, tomorrow.fajr.add(offset));
   }
 
   void _updateCountdown() {

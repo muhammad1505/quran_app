@@ -6,66 +6,274 @@ class PrayerGuidePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const steps = _steps;
     return Scaffold(
-      appBar: AppBar(title: const Text("Tuntunan Sholat")),
-      body: ListView.builder(
+      appBar: AppBar(title: const Text("Panduan Sholat")),
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        itemCount: steps.length,
-        itemBuilder: (context, index) {
-          final step = steps[index];
+        children: PrayerGuideType.values.map((type) {
+          final info = type.info;
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
-            ),
-            child: ExpansionTile(
-              tilePadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
-              childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: Theme.of(
-                  context,
-                ).primaryColor.withValues(alpha: 0.12),
+                backgroundColor:
+                    Theme.of(context).primaryColor.withValues(alpha: 0.12),
                 child: Text(
-                  "${step.number}",
+                  info.shortLabel,
                   style: TextStyle(color: Theme.of(context).primaryColor),
                 ),
               ),
-              title: Text(
-                step.title,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(
-                step.summary,
-                style: GoogleFonts.poppins(fontSize: 12),
-              ),
-              children: [
-                if (step.illustration != PrayerIllustrationType.none)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: PrayerIllustration(type: step.illustration),
+              title: Text(info.title),
+              subtitle: Text('${info.rakaat} rakaat'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PrayerGuideDetailPage(type: type),
                   ),
-                _Section(
-                  title: "Penjelasan",
-                  body: step.detail,
-                ),
-                if (step.arabic.isNotEmpty)
-                  _ArabicSection(
-                    arabic: step.arabic,
-                    latin: step.latin,
-                    meaning: step.meaning,
-                  ),
-              ],
+                );
+              },
             ),
           );
-        },
+        }).toList(),
       ),
     );
+  }
+}
+
+class PrayerGuideDetailPage extends StatelessWidget {
+  final PrayerGuideType type;
+
+  const PrayerGuideDetailPage({super.key, required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    final info = type.info;
+    const steps = _steps;
+    return Scaffold(
+      appBar: AppBar(title: Text(info.title)),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Ringkasan',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Jumlah rakaat: ${info.rakaat}'),
+                  if (info.notes.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(info.notes),
+                  ],
+                  const SizedBox(height: 12),
+                  _ArabicSection(
+                    arabic: info.niatArabic,
+                    latin: info.niatLatin,
+                    meaning: info.niatMeaning,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          ...steps.map((step) {
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+              ),
+              child: ExpansionTile(
+                tilePadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(
+                    context,
+                  ).primaryColor.withValues(alpha: 0.12),
+                  child: Text(
+                    "${step.number}",
+                    style: TextStyle(color: Theme.of(context).primaryColor),
+                  ),
+                ),
+                title: Text(
+                  step.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  step.summary,
+                  style: GoogleFonts.poppins(fontSize: 12),
+                ),
+                children: [
+                  if (step.illustration != PrayerIllustrationType.none)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: PrayerIllustration(type: step.illustration),
+                    ),
+                  _Section(
+                    title: "Penjelasan",
+                    body: step.detail,
+                  ),
+                  if (step.arabic.isNotEmpty)
+                    _ArabicSection(
+                      arabic: step.arabic,
+                      latin: step.latin,
+                      meaning: step.meaning,
+                    ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+enum PrayerGuideType {
+  subuh,
+  dzuhur,
+  ashar,
+  maghrib,
+  isya,
+  jumat,
+  tarawih,
+  witir,
+}
+
+class PrayerGuideInfo {
+  final String title;
+  final String shortLabel;
+  final int rakaat;
+  final String niatArabic;
+  final String niatLatin;
+  final String niatMeaning;
+  final String notes;
+
+  const PrayerGuideInfo({
+    required this.title,
+    required this.shortLabel,
+    required this.rakaat,
+    required this.niatArabic,
+    required this.niatLatin,
+    required this.niatMeaning,
+    this.notes = '',
+  });
+}
+
+extension PrayerGuideTypeExtension on PrayerGuideType {
+  PrayerGuideInfo get info {
+    switch (this) {
+      case PrayerGuideType.subuh:
+        return const PrayerGuideInfo(
+          title: 'Sholat Subuh',
+          shortLabel: 'S',
+          rakaat: 2,
+          niatArabic:
+              'أُصَلِّي فَرْضَ الصُّبْحِ رَكْعَتَيْنِ مُسْتَقْبِلَ الْقِبْلَةِ أَدَاءً لِلَّهِ تَعَالَى',
+          niatLatin:
+              'Ushalli fardhas shubhi rak\'ataini mustaqbilal qiblati adaa-an lillahi ta\'ala.',
+          niatMeaning:
+              'Aku niat sholat fardhu Subuh dua rakaat menghadap kiblat karena Allah Ta\'ala.',
+        );
+      case PrayerGuideType.dzuhur:
+        return const PrayerGuideInfo(
+          title: 'Sholat Dzuhur',
+          shortLabel: 'D',
+          rakaat: 4,
+          niatArabic:
+              'أُصَلِّي فَرْضَ الظُّهْرِ أَرْبَعَ رَكَعَاتٍ مُسْتَقْبِلَ الْقِبْلَةِ أَدَاءً لِلَّهِ تَعَالَى',
+          niatLatin:
+              'Ushalli fardhaz zhuhri arba\'a raka\'atin mustaqbilal qiblati adaa-an lillahi ta\'ala.',
+          niatMeaning:
+              'Aku niat sholat fardhu Dzuhur empat rakaat menghadap kiblat karena Allah Ta\'ala.',
+        );
+      case PrayerGuideType.ashar:
+        return const PrayerGuideInfo(
+          title: 'Sholat Ashar',
+          shortLabel: 'A',
+          rakaat: 4,
+          niatArabic:
+              'أُصَلِّي فَرْضَ الْعَصْرِ أَرْبَعَ رَكَعَاتٍ مُسْتَقْبِلَ الْقِبْلَةِ أَدَاءً لِلَّهِ تَعَالَى',
+          niatLatin:
+              'Ushalli fardhal \'ashri arba\'a raka\'atin mustaqbilal qiblati adaa-an lillahi ta\'ala.',
+          niatMeaning:
+              'Aku niat sholat fardhu Ashar empat rakaat menghadap kiblat karena Allah Ta\'ala.',
+        );
+      case PrayerGuideType.maghrib:
+        return const PrayerGuideInfo(
+          title: 'Sholat Maghrib',
+          shortLabel: 'M',
+          rakaat: 3,
+          niatArabic:
+              'أُصَلِّي فَرْضَ الْمَغْرِبِ ثَلَاثَ رَكَعَاتٍ مُسْتَقْبِلَ الْقِبْلَةِ أَدَاءً لِلَّهِ تَعَالَى',
+          niatLatin:
+              'Ushalli fardhal maghribi tsalatsa raka\'atin mustaqbilal qiblati adaa-an lillahi ta\'ala.',
+          niatMeaning:
+              'Aku niat sholat fardhu Maghrib tiga rakaat menghadap kiblat karena Allah Ta\'ala.',
+        );
+      case PrayerGuideType.isya:
+        return const PrayerGuideInfo(
+          title: 'Sholat Isya',
+          shortLabel: 'I',
+          rakaat: 4,
+          niatArabic:
+              'أُصَلِّي فَرْضَ الْعِشَاءِ أَرْبَعَ رَكَعَاتٍ مُسْتَقْبِلَ الْقِبْلَةِ أَدَاءً لِلَّهِ تَعَالَى',
+          niatLatin:
+              'Ushalli fardhal \'isya\'i arba\'a raka\'atin mustaqbilal qiblati adaa-an lillahi ta\'ala.',
+          niatMeaning:
+              'Aku niat sholat fardhu Isya empat rakaat menghadap kiblat karena Allah Ta\'ala.',
+        );
+      case PrayerGuideType.jumat:
+        return const PrayerGuideInfo(
+          title: 'Sholat Jumat',
+          shortLabel: 'J',
+          rakaat: 2,
+          niatArabic:
+              'أُصَلِّي فَرْضَ الْجُمُعَةِ رَكْعَتَيْنِ مَأْمُومًا مُسْتَقْبِلَ الْقِبْلَةِ أَدَاءً لِلَّهِ تَعَالَى',
+          niatLatin:
+              'Ushalli fardhal jumu\'ati rak\'ataini ma\'muman mustaqbilal qiblati adaa-an lillahi ta\'ala.',
+          niatMeaning:
+              'Aku niat sholat fardhu Jumat dua rakaat sebagai makmum menghadap kiblat karena Allah Ta\'ala.',
+          notes: 'Didahului khutbah dan dikerjakan berjamaah.',
+        );
+      case PrayerGuideType.tarawih:
+        return const PrayerGuideInfo(
+          title: 'Sholat Tarawih',
+          shortLabel: 'T',
+          rakaat: 8,
+          niatArabic:
+              'أُصَلِّي سُنَّةَ التَّرَاوِيحِ رَكْعَتَيْنِ مُسْتَقْبِلَ الْقِبْلَةِ لِلَّهِ تَعَالَى',
+          niatLatin:
+              'Ushalli sunnatat tarawihi rak\'ataini mustaqbilal qiblati lillahi ta\'ala.',
+          niatMeaning:
+              'Aku niat sholat sunnah Tarawih dua rakaat menghadap kiblat karena Allah Ta\'ala.',
+          notes: 'Biasanya dikerjakan 8 atau 20 rakaat, 2 rakaat salam.',
+        );
+      case PrayerGuideType.witir:
+        return const PrayerGuideInfo(
+          title: 'Sholat Witir',
+          shortLabel: 'W',
+          rakaat: 3,
+          niatArabic:
+              'أُصَلِّي سُنَّةَ الْوِتْرِ رَكْعَةً مُسْتَقْبِلَ الْقِبْلَةِ لِلَّهِ تَعَالَى',
+          niatLatin:
+              'Ushalli sunnatal witri rak\'atan mustaqbilal qiblati lillahi ta\'ala.',
+          niatMeaning:
+              'Aku niat sholat sunnah Witir satu rakaat menghadap kiblat karena Allah Ta\'ala.',
+          notes: 'Dikerjakan ganjil (1 atau 3 rakaat).',
+        );
+    }
   }
 }
 

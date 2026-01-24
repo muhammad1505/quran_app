@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/settings/prayer_settings.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
+import 'package:quran_app/core/settings/theme_settings.dart';
 import 'package:quran_app/features/offline/presentation/pages/offline_manager_page.dart';
 import 'package:quran_app/features/quran/presentation/pages/murotal_download_page.dart';
 import 'package:quran_app/core/services/prayer_notification_service.dart';
@@ -30,6 +31,8 @@ class _SettingsPageState extends State<SettingsPage> {
       AudioSettingsController.instance;
   final PrayerSettingsController _prayerSettings =
       PrayerSettingsController.instance;
+  final ThemeSettingsController _themeSettings =
+      ThemeSettingsController.instance;
 
   @override
   void initState() {
@@ -37,6 +40,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _quranSettings.addListener(_onSettingsChanged);
     _audioSettings.addListener(_onSettingsChanged);
     _prayerSettings.addListener(_onSettingsChanged);
+    _themeSettings.addListener(_onSettingsChanged);
     _loadSettings();
   }
 
@@ -45,6 +49,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _quranSettings.removeListener(_onSettingsChanged);
     _audioSettings.removeListener(_onSettingsChanged);
     _prayerSettings.removeListener(_onSettingsChanged);
+    _themeSettings.removeListener(_onSettingsChanged);
     super.dispose();
   }
 
@@ -54,10 +59,15 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _refreshPrayerNotifications() async {
+    await _syncPrayerNotifications(_enableNotifications);
+  }
+
   Future<void> _loadSettings() async {
     await _quranSettings.load();
     await _audioSettings.load();
     await _prayerSettings.load();
+    await _themeSettings.load();
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _enableNotifications = prefs.getBool('notifications') ?? true;
@@ -106,6 +116,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               );
             },
+          ),
+          const Divider(),
+          _buildSectionHeader("Tampilan"),
+          ListTile(
+            title: const Text("Tema"),
+            subtitle: Text(_themeModeLabel(_themeSettings.value.mode)),
+            leading: const Icon(Icons.brightness_6_outlined),
+            onTap: _showThemeDialog,
           ),
           const Divider(),
           _buildSectionHeader("Al-Quran & Audio"),
@@ -268,6 +286,37 @@ class _SettingsPageState extends State<SettingsPage> {
             leading: const Icon(Icons.menu_book),
             onTap: () => _showMadhabDialog(),
           ),
+          ListTile(
+            title: const Text("Koreksi Menit"),
+            subtitle: Text(
+              _prayerSettings.value.correctionMinutes == 0
+                  ? 'Tidak ada koreksi'
+                  : '${_prayerSettings.value.correctionMinutes > 0 ? '+' : ''}${_prayerSettings.value.correctionMinutes} menit',
+            ),
+            leading: const Icon(Icons.tune),
+            onTap: _showCorrectionSheet,
+          ),
+          ListTile(
+            title: const Text("Notifikasi per Waktu"),
+            subtitle: const Text("Atur pengingat setiap sholat"),
+            leading: const Icon(Icons.notifications_active_outlined),
+            onTap: _showPrayerNotificationSheet,
+          ),
+          ListTile(
+            title: const Text("Suara Adzan"),
+            subtitle: Text(_prayerSettings.value.adzanSound.label),
+            leading: const Icon(Icons.volume_up_outlined),
+            onTap: _showAdzanSheet,
+          ),
+          SwitchListTile(
+            title: const Text("Mode Silent Saat Sholat"),
+            subtitle: const Text("Matikan suara notifikasi"),
+            value: _prayerSettings.value.silentMode,
+            onChanged: (value) async {
+              await _prayerSettings.setSilentMode(value);
+              await _refreshPrayerNotifications();
+            },
+          ),
           const Divider(),
           _buildSectionHeader("Tentang"),
           const ListTile(
@@ -305,6 +354,212 @@ class _SettingsPageState extends State<SettingsPage> {
       default:
         return "Mishary Rashid Alafasy";
     }
+  }
+
+  void _showCorrectionSheet() {
+    var temp = _prayerSettings.value.correctionMinutes.toDouble();
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Koreksi Menit',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      temp == 0
+                          ? '0 menit'
+                          : '${temp > 0 ? '+' : ''}${temp.toInt()} menit',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    Slider(
+                      value: temp,
+                      min: -30,
+                      max: 30,
+                      divisions: 60,
+                      label: temp.toInt().toString(),
+                      onChanged: (value) {
+                        setSheetState(() => temp = value);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await _prayerSettings
+                              .updateCorrectionMinutes(temp.toInt());
+                          if (mounted) {
+                            Navigator.pop(context);
+                          }
+                          await _refreshPrayerNotifications();
+                        },
+                        child: const Text('Simpan'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showPrayerNotificationSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(title: Text('Notifikasi per Waktu')),
+              SwitchListTile(
+                title: const Text('Subuh'),
+                value: _prayerSettings.value.notifyFajr,
+                onChanged: (value) async {
+                  await _prayerSettings.setNotificationEnabled(
+                    Prayer.fajr,
+                    value,
+                  );
+                  await _refreshPrayerNotifications();
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Dzuhur'),
+                value: _prayerSettings.value.notifyDhuhr,
+                onChanged: (value) async {
+                  await _prayerSettings.setNotificationEnabled(
+                    Prayer.dhuhr,
+                    value,
+                  );
+                  await _refreshPrayerNotifications();
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Ashar'),
+                value: _prayerSettings.value.notifyAsr,
+                onChanged: (value) async {
+                  await _prayerSettings.setNotificationEnabled(
+                    Prayer.asr,
+                    value,
+                  );
+                  await _refreshPrayerNotifications();
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Maghrib'),
+                value: _prayerSettings.value.notifyMaghrib,
+                onChanged: (value) async {
+                  await _prayerSettings.setNotificationEnabled(
+                    Prayer.maghrib,
+                    value,
+                  );
+                  await _refreshPrayerNotifications();
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Isya'),
+                value: _prayerSettings.value.notifyIsha,
+                onChanged: (value) async {
+                  await _prayerSettings.setNotificationEnabled(
+                    Prayer.isha,
+                    value,
+                  );
+                  await _refreshPrayerNotifications();
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAdzanSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(title: Text('Pilih Suara Adzan')),
+              ...AdzanSound.values.map(
+                (sound) => RadioListTile<AdzanSound>(
+                  value: sound,
+                  groupValue: _prayerSettings.value.adzanSound,
+                  title: Text(sound.label),
+                  onChanged: (value) async {
+                    if (value == null) return;
+                    await _prayerSettings.setAdzanSound(value);
+                    if (mounted) {
+                      Navigator.pop(context);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _themeModeLabel(AppThemeMode mode) {
+    switch (mode) {
+      case AppThemeMode.light:
+        return "Terang";
+      case AppThemeMode.dark:
+        return "Gelap";
+      case AppThemeMode.sepia:
+        return "Sepia";
+    }
+  }
+
+  void _showThemeDialog() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text("Pilih Tema"),
+                trailing: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+              ...AppThemeMode.values.map(
+                (mode) => RadioListTile<AppThemeMode>(
+                  value: mode,
+                  groupValue: _themeSettings.value.mode,
+                  title: Text(_themeModeLabel(mode)),
+                  onChanged: (value) {
+                    if (value == null) return;
+                    _themeSettings.setThemeMode(value);
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _showTranslationDialog() {
@@ -717,6 +972,7 @@ class _SettingsPageState extends State<SettingsPage> {
     await PrayerNotificationService.instance.schedulePrayerTimes(
       today,
       tomorrow,
+      _prayerSettings.value,
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:quran_app/features/prayer_times/presentation/pages/prayer_times_
 import 'package:quran_app/features/prayer_times/presentation/widgets/prayer_times_summary_card.dart';
 import 'package:quran_app/features/qibla/presentation/pages/qibla_page.dart';
 import 'package:quran_app/features/prayer_guide/presentation/pages/prayer_guide_page.dart';
+import 'package:quran_app/features/more/presentation/pages/articles_page.dart';
 
 class SholatPage extends StatefulWidget {
   const SholatPage({super.key});
@@ -155,8 +156,9 @@ class _SholatPageState extends State<SholatPage> {
     return ActionChip(
       label: Text(label),
       onPressed: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Konten "$label" segera hadir.')),
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ArticlesPage()),
         );
       },
     );

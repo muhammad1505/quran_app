@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
+import 'core/settings/theme_settings.dart';
 import 'features/quran/presentation/pages/quran_page.dart';
 import 'features/prayer_times/presentation/pages/prayer_times_page.dart';
 import 'features/prayer_times/presentation/widgets/prayer_times_summary_card.dart';
@@ -22,18 +23,43 @@ Future<void> main() async {
   runApp(const QuranApp());
 }
 
-class QuranApp extends StatelessWidget {
+class QuranApp extends StatefulWidget {
   const QuranApp({super.key});
 
   @override
+  State<QuranApp> createState() => _QuranAppState();
+}
+
+class _QuranAppState extends State<QuranApp> {
+  final ThemeSettingsController _themeSettings =
+      ThemeSettingsController.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _themeSettings.load();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Al-Quran Terjemahan',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      home: const SplashScreen(),
+    return AnimatedBuilder(
+      animation: _themeSettings,
+      builder: (context, _) {
+        final mode = _themeSettings.value.mode;
+        final ThemeMode themeMode = mode == AppThemeMode.dark
+            ? ThemeMode.dark
+            : ThemeMode.light;
+        final ThemeData lightTheme =
+            mode == AppThemeMode.sepia ? AppTheme.sepiaTheme : AppTheme.lightTheme;
+        return MaterialApp(
+          title: 'Al-Quran Terjemahan',
+          debugShowCheckedModeBanner: false,
+          theme: lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeMode,
+          home: const SplashScreen(),
+        );
+      },
     );
   }
 }
