@@ -196,7 +196,7 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
     final sabiqAvailable =
         TranslationAssetService.instance.requiresAsset(TranslationSource.idSabiq);
     return _TranslationStatus(
-      kemenag: kemenagAvailable ? 'Tersedia offline' : 'Perlu unduh',
+      kemenag: 'Tersedia offline',
       kingFahad: kingFahadAvailable ? 'Tersedia offline' : 'Tidak ditemukan',
       sabiq: sabiqAvailable ? 'Tersedia offline' : 'Tidak ditemukan',
       kemenagAvailable: kemenagAvailable,
