@@ -108,10 +108,11 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: const Text("Kirim notifikasi uji dalam 5 detik"),
             leading: const Icon(Icons.notifications_active),
             onTap: () async {
+              final messenger = ScaffoldMessenger.of(context);
               final success = await PrayerNotificationService.instance
                   .scheduleTestNotification();
               if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
+              messenger.showSnackBar(
                 SnackBar(
                   content: Text(
                     success
