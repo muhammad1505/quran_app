@@ -31,7 +31,7 @@ jobs:
           if [ -f "android/app/build.gradle" ]; then
             echo "Detected Groovy DSL"
             sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle
-            python - <<'PY'
+          python - <<'PY'
 from pathlib import Path
 path = Path("android/app/build.gradle")
 text = path.read_text()
@@ -52,7 +52,7 @@ PY
           elif [ -f "android/app/build.gradle.kts" ]; then
             echo "Detected Kotlin DSL"
             sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/' android/app/build.gradle.kts
-            python - <<'PY'
+          python - <<'PY'
 from pathlib import Path
 path = Path("android/app/build.gradle.kts")
 text = path.read_text()
