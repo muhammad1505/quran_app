@@ -2,6 +2,7 @@ import 'package:adhan/adhan.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:quran_app/core/settings/prayer_settings.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -37,26 +38,69 @@ class PrayerNotificationService {
     _initialized = true;
   }
 
-  Future<void> requestPermissions() async {
-    if (kIsWeb) return;
-    final android = _notifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    await android?.requestNotificationsPermission();
-    final ios = _notifications
-        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-    await ios?.requestPermissions(alert: true, badge: true, sound: true);
+  Future<bool> requestPermissions() async {
+    return _ensureNotificationPermission();
+  }
+
+  Future<bool> _ensureNotificationPermission() async {
+    if (kIsWeb) return false;
+    final status = await Permission.notification.status;
+    if (status.isGranted) return true;
+    final result = await Permission.notification.request();
+    return result.isGranted;
+  }
+
+  Future<bool> _scheduleZonedWithFallback({
+    required int id,
+    required String title,
+    required String body,
+    required tz.TZDateTime scheduled,
+    required NotificationDetails details,
+  }) async {
+    try {
+      await _notifications.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduled,
+        details,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+      return true;
+    } catch (error) {
+      debugPrint('Exact schedule failed: $error');
+    }
+
+    try {
+      await _notifications.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduled,
+        details,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+      return true;
+    } catch (error) {
+      debugPrint('Inexact schedule failed: $error');
+    }
+    return false;
   }
 
   Future<void> cancelAll() async {
     await _notifications.cancelAll();
   }
 
-  Future<void> scheduleTestNotification() async {
+  Future<bool> scheduleTestNotification() async {
     await initialize();
-    await requestPermissions();
+    final permissionGranted = await _ensureNotificationPermission();
+    if (!permissionGranted) return false;
     final scheduled =
-        tz.TZDateTime.from(DateTime.now().add(const Duration(seconds: 5)), tz.local);
+        tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5));
     const androidDetails = AndroidNotificationDetails(
       'prayer_test',
       'Test Notifikasi',
@@ -65,16 +109,22 @@ class PrayerNotificationService {
       priority: Priority.high,
     );
     const details = NotificationDetails(android: androidDetails);
-    await _notifications.zonedSchedule(
-      2998,
-      'Test Notifikasi Adzan',
-      'Jika kamu melihat ini, notifikasi berhasil.',
-      scheduled,
-      details,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    final success = await _scheduleZonedWithFallback(
+      id: 2998,
+      title: 'Test Notifikasi Adzan',
+      body: 'Jika kamu melihat ini, notifikasi berhasil.',
+      scheduled: scheduled,
+      details: details,
     );
+    if (!success) {
+      await _notifications.show(
+        2998,
+        'Test Notifikasi Adzan',
+        'Jika kamu melihat ini, notifikasi berhasil.',
+        details,
+      );
+    }
+    return true;
   }
 
   Future<void> schedulePrayerTimes(
@@ -83,7 +133,8 @@ class PrayerNotificationService {
     PrayerSettings settings,
   ) async {
     await initialize();
-    await requestPermissions();
+    final permissionGranted = await _ensureNotificationPermission();
+    if (!permissionGranted) return;
     await cancelAll();
 
     final now = DateTime.now();
@@ -143,15 +194,12 @@ class PrayerNotificationService {
       iOS: iosDetails,
     );
 
-    await _notifications.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduled,
-      details,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    await _scheduleZonedWithFallback(
+      id: id,
+      title: title,
+      body: body,
+      scheduled: scheduled,
+      details: details,
     );
   }
 

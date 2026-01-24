@@ -107,12 +107,17 @@ class _SettingsPageState extends State<SettingsPage> {
             title: const Text("Test Notifikasi"),
             subtitle: const Text("Kirim notifikasi uji dalam 5 detik"),
             leading: const Icon(Icons.notifications_active),
-            onTap: () {
-              unawaited(PrayerNotificationService.instance
-                  .scheduleTestNotification());
+            onTap: () async {
+              final success = await PrayerNotificationService.instance
+                  .scheduleTestNotification();
+              if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Test notifikasi dijadwalkan."),
+                SnackBar(
+                  content: Text(
+                    success
+                        ? "Test notifikasi dijadwalkan."
+                        : "Izin notifikasi belum diberikan.",
+                  ),
                 ),
               );
             },
@@ -958,6 +963,18 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _syncPrayerNotifications(bool enabled) async {
     if (!enabled) {
       await PrayerNotificationService.instance.cancelAll();
+      return;
+    }
+    final permissionGranted =
+        await PrayerNotificationService.instance.requestPermissions();
+    if (!permissionGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Izin notifikasi belum diberikan."),
+          ),
+        );
+      }
       return;
     }
     final prefs = await SharedPreferences.getInstance();
