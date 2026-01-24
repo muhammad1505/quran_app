@@ -148,8 +148,40 @@ jobs:
             if [ -f "android/build.gradle" ]; then
           python - <<'PY'
           from pathlib import Path
+          import re
           path = Path("android/build.gradle")
           text = path.read_text()
+          if "buildscript" not in text:
+              text = (
+                  "buildscript {\n"
+                  "    repositories {\n"
+                  "        google()\n"
+                  "        mavenCentral()\n"
+                  "    }\n"
+                  "    dependencies {\n"
+                  "        classpath 'com.google.gms:google-services:4.4.1'\n"
+                  "    }\n"
+                  "}\n\n"
+              ) + text
+          else:
+              # Ensure repositories include google/mavenCentral
+              def ensure_repo(block):
+                  if "google()" not in block:
+                      block = block.replace("repositories {", "repositories {\n        google()", 1)
+                  if "mavenCentral()" not in block:
+                      block = block.replace("repositories {", "repositories {\n        mavenCentral()", 1)
+                  return block
+              match = re.search(r"buildscript\\s*\\{", text)
+              if match:
+                  start = match.start()
+                  repo_match = re.search(r"repositories\\s*\\{", text[start:])
+                  if repo_match:
+                      repo_start = start + repo_match.start()
+                      # insert repositories entries if missing
+                      before = text[:repo_start]
+                      after = text[repo_start:]
+                      after = ensure_repo(after)
+                      text = before + after
           if "com.google.gms:google-services" not in text:
               if "dependencies {" in text:
                   text = text.replace(
@@ -160,6 +192,10 @@ jobs:
               else:
                   text += (
                       "\n\nbuildscript {\n"
+                      "    repositories {\n"
+                      "        google()\n"
+                      "        mavenCentral()\n"
+                      "    }\n"
                       "    dependencies {\n"
                       "        classpath 'com.google.gms:google-services:4.4.1'\n"
                       "    }\n"
@@ -188,8 +224,39 @@ jobs:
             if [ -f "android/build.gradle.kts" ]; then
           python - <<'PY'
           from pathlib import Path
+          import re
           path = Path("android/build.gradle.kts")
           text = path.read_text()
+          if "buildscript" not in text:
+              text = (
+                  "buildscript {\n"
+                  "    repositories {\n"
+                  "        google()\n"
+                  "        mavenCentral()\n"
+                  "    }\n"
+                  "    dependencies {\n"
+                  "        classpath(\"com.google.gms:google-services:4.4.1\")\n"
+                  "    }\n"
+                  "}\n\n"
+              ) + text
+          else:
+              # Ensure repositories include google/mavenCentral
+              def ensure_repo(block):
+                  if "google()" not in block:
+                      block = block.replace("repositories {", "repositories {\n        google()", 1)
+                  if "mavenCentral()" not in block:
+                      block = block.replace("repositories {", "repositories {\n        mavenCentral()", 1)
+                  return block
+              match = re.search(r"buildscript\\s*\\{", text)
+              if match:
+                  start = match.start()
+                  repo_match = re.search(r"repositories\\s*\\{", text[start:])
+                  if repo_match:
+                      repo_start = start + repo_match.start()
+                      before = text[:repo_start]
+                      after = text[repo_start:]
+                      after = ensure_repo(after)
+                      text = before + after
           if "com.google.gms:google-services" not in text:
               if "dependencies {" in text:
                   text = text.replace(
@@ -200,6 +267,10 @@ jobs:
               else:
                   text += (
                       "\n\nbuildscript {\n"
+                      "    repositories {\n"
+                      "        google()\n"
+                      "        mavenCentral()\n"
+                      "    }\n"
                       "    dependencies {\n"
                       "        classpath(\"com.google.gms:google-services:4.4.1\")\n"
                       "    }\n"
