@@ -36,18 +36,16 @@ jobs:
           sed -i 's|</manifest>|<uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/><uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/><uses-permission android:name="android.permission.POST_NOTIFICATIONS"/></manifest>|' android/app/src/main/AndroidManifest.xml
 
           # Update App Name
+          mkdir -p android/app/src/main/res/values
+          cat > android/app/src/main/res/values/strings.xml <<'XML'
+          <resources>
+            <string name="app_name">Al-Quran Terjemahan</string>
+          </resources>
+          XML
           python - <<'PY'
           from pathlib import Path
           import re
           app_name = "Al-Quran Terjemahan"
-          strings_path = Path("android/app/src/main/res/values/strings.xml")
-          strings_path.parent.mkdir(parents=True, exist_ok=True)
-          strings_path.write_text(
-              '<?xml version="1.0" encoding="utf-8"?>\\n'
-              '<resources>\\n'
-              f'  <string name="app_name">{app_name}</string>\\n'
-              '</resources>\\n'
-          )
           manifest_path = Path("android/app/src/main/AndroidManifest.xml")
           if manifest_path.exists():
               text = manifest_path.read_text()
