@@ -190,35 +190,31 @@ class _QuranPageState extends State<QuranPage> {
     }
     if (source == TranslationSource.enSaheeh) {
       return _sanitizeTranslation(
-        AlQuran.translation(
-          TranslationType.enSahihInternational,
+        quran.getVerseTranslation(
           surah,
           ayah,
           translation: quran.Translation.enSaheeh,
         ),
       );
     }
+    final verseKey = '$surah:$ayah';
     return _sanitizeTranslation(
       AlQuran.translation(
         _translationType(source),
-        surah,
-        ayah,
-      ),
+        verseKey,
+      ).text,
     );
   }
 
   TranslationType _translationType(TranslationSource source) {
     switch (source) {
       case TranslationSource.idKemenag:
-        return TranslationType.idIndonesianIslamicAffairsMinistry;
       case TranslationSource.idKingFahad:
-        return TranslationType.idKingFahd;
       case TranslationSource.idSabiq:
-        return TranslationType.idSabiqCompany;
+        return TranslationType.idIndonesianIslamicAffairsMinistry;
       case TranslationSource.enAbdelHaleem:
-        return TranslationType.enAbdelHaleem;
       case TranslationSource.enSaheeh:
-        return TranslationType.enSahihInternational;
+        return TranslationType.enMASAbdelHaleem;
     }
   }
 
