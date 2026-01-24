@@ -131,7 +131,7 @@ class _MurotalDownloadPageState extends State<MurotalDownloadPage> {
 
   @override
   Widget build(BuildContext context) {
-    final qaris = AudioCacheService.qaris;
+    const qaris = AudioCacheService.qaris;
     return Scaffold(
       appBar: AppBar(title: const Text('Murotal Offline')),
       body: Column(

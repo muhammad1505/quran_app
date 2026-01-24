@@ -1298,26 +1298,28 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                 leading: const Icon(Icons.copy_all),
                 title: const Text('Salin teks Arab'),
                 onTap: () async {
+                  final navigator = Navigator.of(context);
+                  final messenger = ScaffoldMessenger.of(context);
                   await Clipboard.setData(ClipboardData(text: arabic));
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                  if (!mounted) return;
+                  navigator.pop();
+                  messenger.showSnackBar(
                       const SnackBar(content: Text('Teks Arab disalin.')),
-                    );
-                  }
+                  );
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.copy),
                 title: const Text('Salin terjemahan'),
                 onTap: () async {
+                  final navigator = Navigator.of(context);
+                  final messenger = ScaffoldMessenger.of(context);
                   await Clipboard.setData(ClipboardData(text: translation));
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                  if (!mounted) return;
+                  navigator.pop();
+                  messenger.showSnackBar(
                       const SnackBar(content: Text('Terjemahan disalin.')),
-                    );
-                  }
+                  );
                 },
               ),
               if (transliteration.isNotEmpty)
@@ -1325,17 +1327,18 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
                   leading: const Icon(Icons.text_fields),
                   title: const Text('Salin transliterasi'),
                   onTap: () async {
+                    final navigator = Navigator.of(context);
+                    final messenger = ScaffoldMessenger.of(context);
                     await Clipboard.setData(
                       ClipboardData(text: transliteration),
                     );
-                    if (mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                    if (!mounted) return;
+                    navigator.pop();
+                    messenger.showSnackBar(
                         const SnackBar(
                           content: Text('Transliterasi disalin.'),
                         ),
-                      );
-                    }
+                    );
                   },
                 ),
               ListTile(
@@ -1427,6 +1430,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   }
 
   Future<void> _showFolderPicker(int verseNumber) async {
+    final sheetContext = context;
     final folders = await BookmarkService.instance.getFolders();
     if (!mounted) return;
     if (!_isBookmarked(verseNumber)) {
@@ -1437,7 +1441,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
       await _loadBookmarks();
     }
     showModalBottomSheet(
-      context: context,
+      context: sheetContext,
       builder: (context) {
         return SafeArea(
           child: Column(

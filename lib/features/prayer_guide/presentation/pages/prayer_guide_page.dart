@@ -6,7 +6,7 @@ class PrayerGuidePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final steps = _steps;
+    const steps = _steps;
     return Scaffold(
       appBar: AppBar(title: const Text("Tuntunan Sholat")),
       body: ListView.builder(

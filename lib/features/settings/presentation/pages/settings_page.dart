@@ -270,7 +270,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const Divider(),
           _buildSectionHeader("Tentang"),
-          ListTile(
+          const ListTile(
             title: const Text("Versi Aplikasi"),
             subtitle: const Text("1.0.0 (Release)"),
             leading: const Icon(Icons.info_outline),
@@ -547,6 +547,7 @@ class _SettingsPageState extends State<SettingsPage> {
         actions: [
           TextButton(
             onPressed: () async {
+              final navigator = Navigator.of(context);
               final prefs = await SharedPreferences.getInstance();
               await prefs.setBool('manual_location_enabled', false);
               if (!mounted) return;
@@ -554,7 +555,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 _manualLocationEnabled = false;
                 _manualLocationName = null;
               });
-              Navigator.pop(context);
+              navigator.pop();
             },
             child: const Text('Gunakan Otomatis'),
           ),
@@ -564,6 +565,8 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           ElevatedButton(
             onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
               final input = controller.text.trim();
               if (input.isEmpty) return;
               try {
@@ -580,10 +583,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   _manualLocationEnabled = true;
                   _manualLocationName = input;
                 });
-                Navigator.pop(context);
+                navigator.pop();
               } catch (_) {
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   const SnackBar(content: Text('Gagal menemukan lokasi.')),
                 );
               }

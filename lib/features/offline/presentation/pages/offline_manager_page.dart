@@ -241,7 +241,7 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
   }
 
   _TranslationStatus _translationStatus() {
-    final kemenagAvailable = true;
+    const kemenagAvailable = true;
     final kingFahadAvailable =
         TranslationAssetService.instance.requiresAsset(TranslationSource.idKingFahad);
     final sabiqAvailable =
