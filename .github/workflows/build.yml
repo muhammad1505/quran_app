@@ -31,9 +31,21 @@ jobs:
           if [ -f "android/app/build.gradle" ]; then
             echo "Detected Groovy DSL"
             sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle
+            if ! grep -q "coreLibraryDesugaringEnabled" android/app/build.gradle; then
+              sed -i 's/compileOptions {/compileOptions {\\n        coreLibraryDesugaringEnabled true/' android/app/build.gradle
+            fi
+            if ! grep -q "desugar_jdk_libs" android/app/build.gradle; then
+              sed -i '/dependencies {/a\\    coreLibraryDesugaring '"'"'com.android.tools:desugar_jdk_libs:2.0.4'"'"'' android/app/build.gradle
+            fi
           elif [ -f "android/app/build.gradle.kts" ]; then
             echo "Detected Kotlin DSL"
             sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/' android/app/build.gradle.kts
+            if ! grep -q "isCoreLibraryDesugaringEnabled" android/app/build.gradle.kts; then
+              sed -i 's/compileOptions {/compileOptions {\\n        isCoreLibraryDesugaringEnabled = true/' android/app/build.gradle.kts
+            fi
+            if ! grep -q "desugar_jdk_libs" android/app/build.gradle.kts; then
+              sed -i '/dependencies {/a\\    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")' android/app/build.gradle.kts
+            fi
           else
             echo "Error: Neither build.gradle nor build.gradle.kts found in android/app/"
             ls -R android/app
