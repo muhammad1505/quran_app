@@ -32,44 +32,44 @@ jobs:
             echo "Detected Groovy DSL"
             sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle
           python - <<'PY'
-from pathlib import Path
-path = Path("android/app/build.gradle")
-text = path.read_text()
-if "coreLibraryDesugaringEnabled" not in text:
-    text = text.replace(
-        "compileOptions {",
-        "compileOptions {\n        coreLibraryDesugaringEnabled true",
-        1,
-    )
-if "desugar_jdk_libs" not in text:
-    text = text.replace(
-        "dependencies {",
-        "dependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'",
-        1,
-    )
-path.write_text(text)
-PY
+          from pathlib import Path
+          path = Path("android/app/build.gradle")
+          text = path.read_text()
+          if "coreLibraryDesugaringEnabled" not in text:
+              text = text.replace(
+                  "compileOptions {",
+                  "compileOptions {\n        coreLibraryDesugaringEnabled true",
+                  1,
+              )
+          if "desugar_jdk_libs" not in text:
+              text = text.replace(
+                  "dependencies {",
+                  "dependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'",
+                  1,
+              )
+          path.write_text(text)
+          PY
           elif [ -f "android/app/build.gradle.kts" ]; then
             echo "Detected Kotlin DSL"
             sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/' android/app/build.gradle.kts
           python - <<'PY'
-from pathlib import Path
-path = Path("android/app/build.gradle.kts")
-text = path.read_text()
-if "isCoreLibraryDesugaringEnabled" not in text:
-    text = text.replace(
-        "compileOptions {",
-        "compileOptions {\n        isCoreLibraryDesugaringEnabled = true",
-        1,
-    )
-if "desugar_jdk_libs" not in text:
-    text = text.replace(
-        "dependencies {",
-        "dependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")",
-        1,
-    )
-path.write_text(text)
-PY
+          from pathlib import Path
+          path = Path("android/app/build.gradle.kts")
+          text = path.read_text()
+          if "isCoreLibraryDesugaringEnabled" not in text:
+              text = text.replace(
+                  "compileOptions {",
+                  "compileOptions {\n        isCoreLibraryDesugaringEnabled = true",
+                  1,
+              )
+          if "desugar_jdk_libs" not in text:
+              text = text.replace(
+                  "dependencies {",
+                  "dependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")",
+                  1,
+              )
+          path.write_text(text)
+          PY
           else
             echo "Error: Neither build.gradle nor build.gradle.kts found in android/app/"
             ls -R android/app
