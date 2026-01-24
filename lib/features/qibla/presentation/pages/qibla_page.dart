@@ -20,6 +20,7 @@ class _QiblaPageState extends State<QiblaPage> {
   double? _lastHeading;
   final List<double> _headingBuffer = [];
   DateTime? _lastHapticAt;
+  String? _accuracyMessage;
 
   @override
   void initState() {
@@ -33,7 +34,7 @@ class _QiblaPageState extends State<QiblaPage> {
       setState(() => _hasPermission = true);
       // High accuracy for better initial lock
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.bestForNavigation,
       );
       
       final coordinates = Coordinates(position.latitude, position.longitude);
@@ -92,6 +93,32 @@ class _QiblaPageState extends State<QiblaPage> {
     return normalized;
   }
 
+  double? _resolveHeading(CompassEvent? event) {
+    if (event == null) return null;
+    final dynamic raw = event;
+    try {
+      final headingForCompass = raw.headingForCompass;
+      if (headingForCompass is double) return headingForCompass;
+    } catch (_) {
+      // Ignore if property is not available on this platform.
+    }
+    return event.heading;
+  }
+
+  String? _resolveAccuracyMessage(CompassEvent? event) {
+    if (event == null) return null;
+    final dynamic raw = event;
+    try {
+      final accuracy = raw.accuracy;
+      if (accuracy is double && accuracy >= 0 && accuracy > 15) {
+        return 'Akurasi rendah. Gerakkan ponsel membentuk angka 8.';
+      }
+    } catch (_) {
+      // Ignore if property is not available on this platform.
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -125,11 +152,15 @@ class _QiblaPageState extends State<QiblaPage> {
                       );
                     }
 
-                    double? rawHeading = snapshot.data?.heading;
-                    if (rawHeading == null) return const Center(child: Text("Sensor tidak tersedia"));
+                    final rawHeading = _resolveHeading(snapshot.data);
+                    if (rawHeading == null) {
+                      return const Center(child: Text("Sensor tidak tersedia"));
+                    }
+                    _accuracyMessage = _resolveAccuracyMessage(snapshot.data);
 
                     // Apply Smoothing
-                    double smoothedHeading = _smoothHeading(rawHeading);
+                    final normalizedHeading = _normalizeAngle(rawHeading);
+                    double smoothedHeading = _smoothHeading(normalizedHeading);
                     
                     // Calculate Qibla relative to North
                     // We rotate the COMPASS DISK so North matches reality.
@@ -141,7 +172,8 @@ class _QiblaPageState extends State<QiblaPage> {
                     // 3. The Qibla needle should point to _qiblaDirection on the dial.
 
                     // Check alignment for Haptic Feedback
-                    final diff = _angleDelta(smoothedHeading, _qiblaDirection!).abs();
+                    final diff =
+                        _angleDelta(smoothedHeading, _qiblaDirection!).abs();
                     if (diff < 2) {
                       final now = DateTime.now();
                       if (_lastHapticAt == null ||
@@ -186,7 +218,20 @@ class _QiblaPageState extends State<QiblaPage> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 50),
+                          const SizedBox(height: 20),
+                          if (_accuracyMessage != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Text(
+                                _accuracyMessage!,
+                                style: GoogleFonts.poppins(
+                                  color: Colors.orangeAccent,
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          const SizedBox(height: 18),
                           
                           // THE COMPASS UI
                           SizedBox(

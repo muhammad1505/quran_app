@@ -1886,12 +1886,19 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     required String subject,
   }) async {
     try {
-      final boundary =
-          boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      await Future.delayed(const Duration(milliseconds: 50));
+      await WidgetsBinding.instance.endOfFrame;
+      final boundary = boundaryKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
       if (boundary == null) {
         throw Exception('Gagal menangkap gambar.');
       }
-      final image = await boundary.toImage(pixelRatio: 3);
+      if (boundary.debugNeedsPaint) {
+        await Future.delayed(const Duration(milliseconds: 20));
+        await WidgetsBinding.instance.endOfFrame;
+      }
+      final pixelRatio = MediaQuery.of(context).devicePixelRatio;
+      final image = await boundary.toImage(pixelRatio: pixelRatio);
       final byteData =
           await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) {
