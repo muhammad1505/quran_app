@@ -194,6 +194,13 @@ class _DoaPageState extends State<DoaPage> {
     _loadFavorites();
   }
 
+  @override
+  void dispose() {
+    _stopAsmaulRequested = true;
+    TtsService.instance.stop();
+    super.dispose();
+  }
+
   Future<void> _loadFavorites() async {
     final favorites = await DoaFavoriteService.instance.getFavorites();
     if (!mounted) return;

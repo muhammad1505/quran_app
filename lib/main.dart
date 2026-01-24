@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:alfurqan/alfurqan.dart';
 import 'package:alfurqan/constant.dart';
@@ -199,7 +201,7 @@ class _HomePageState extends State<HomePage> {
     _quranSettings.addListener(_onSettingsChanged);
     _loadLocationLabel();
     _loadLastRead();
-    _loadDailyVerse();
+    unawaited(_initHome());
     _loadBookmarkKeys();
   }
 
@@ -211,6 +213,11 @@ class _HomePageState extends State<HomePage> {
 
   void _onSettingsChanged() {
     _loadDailyVerse();
+  }
+
+  Future<void> _initHome() async {
+    await _quranSettings.load();
+    await _loadDailyVerse();
   }
 
   Future<void> _loadLocationLabel() async {
@@ -247,7 +254,6 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadDailyVerse() async {
     setState(() => _isDailyVerseLoading = true);
-    await _quranSettings.load();
     final now = DateTime.now();
     final dayIndex =
         now.difference(DateTime(now.year, 1, 1)).inDays;

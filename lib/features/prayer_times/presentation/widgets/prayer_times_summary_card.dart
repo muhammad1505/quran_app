@@ -39,8 +39,7 @@ class _PrayerTimesSummaryCardState extends State<PrayerTimesSummaryCard> {
     super.initState();
     _prayerSettings.addListener(_onSettingsChanged);
     _prayerSettings.load();
-    _loadFromLastLocation();
-    _initLocation();
+    unawaited(_initCard());
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       _updateCountdown();
     });
@@ -57,6 +56,11 @@ class _PrayerTimesSummaryCardState extends State<PrayerTimesSummaryCard> {
     if (_coordinates != null) {
       _calculatePrayerTimes(_coordinates!);
     }
+  }
+
+  Future<void> _initCard() async {
+    await _loadFromLastLocation();
+    await _initLocation();
   }
 
   Future<void> _loadFromLastLocation() async {

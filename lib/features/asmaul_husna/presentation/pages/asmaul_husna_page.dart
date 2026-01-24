@@ -17,6 +17,13 @@ class _AsmaulHusnaPageState extends State<AsmaulHusnaPage> {
   bool _isPlayingAll = false;
   bool _stopRequested = false;
 
+  @override
+  void dispose() {
+    _stopRequested = true;
+    TtsService.instance.stop();
+    super.dispose();
+  }
+
   Future<void> _togglePlayAll(List<AsmaulHusnaItem> items) async {
     if (_isPlayingAll) {
       _stopRequested = true;
