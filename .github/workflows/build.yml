@@ -1,87 +1,42 @@
-name: Build Application
+name: Flutter CI Build
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  build-android:
-    name: Build Android APK
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: write # Required to create a Release
-    
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true
-          
+
       - name: Install dependencies
         run: flutter pub get
-        
-      - name: Scaffold Android
-        run: flutter create . --platforms android
 
-      - name: Inject Android Configuration (Desugaring, MultiDex, Permissions)
+      - name: Scaffold Platform Support
+        run: flutter create .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Rename APK
         run: |
-          # 1. Inject Permissions & App Name into AndroidManifest.xml
-          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST_FILE" ]; then
-            # Add permissions before <application>
-            sed -i '/<application/i \
-            <uses-permission android:name="android.permission.INTERNET"/>\
-            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\
-            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\
-            <uses-permission android:name="android.permission.VIBRATE" />\
-            <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\
-            <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />' "$MANIFEST_FILE"
-            
-            # Change Label
-            sed -i 's/android:label="quran_app"/android:label="Al-Quran Terjemahan"/g' "$MANIFEST_FILE"
-            echo "✅ AndroidManifest.xml patched."
-          fi
+          mkdir -p build/out
+          cp build/app/outputs/flutter-apk/app-release.apk build/out/Al-Quran-Terjemahan-v1.0.0.apk
 
-          # 2. Inject Desugaring & MultiDex into build.gradle (Groovy or Kotlin DSL)
-          GRADLE_FILE="android/app/build.gradle"
-          KTS_FILE="android/app/build.gradle.kts"
-          
-          if [ -f "$KTS_FILE" ]; then
-            echo "Detected Kotlin DSL ($KTS_FILE)"
-            # Kotlin DSL Injection
-            sed -i '/defaultConfig {/a \        multiDexEnabled = true' "$KTS_FILE"
-            sed -i '/compileOptions {/a \        isCoreLibraryDesugaringEnabled = true' "$KTS_FILE"
-            
-            # Append dependency at the end (Safe approach)
-            echo 'dependencies { coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3") }' >> "$KTS_FILE"
-            
-          elif [ -f "$GRADLE_FILE" ]; then
-            echo "Detected Groovy DSL ($GRADLE_FILE)"
-            # Groovy DSL Injection
-            sed -i '/defaultConfig {/a \        multiDexEnabled true' "$GRADLE_FILE"
-            sed -i '/compileOptions {/a \        coreLibraryDesugaringEnabled true' "$GRADLE_FILE"
-            
-            # Append dependency at the end (Safe approach)
-            echo 'dependencies { coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.3" }' >> "$GRADLE_FILE"
-          else
-             echo "❌ No build.gradle found!"
-             exit 1
-          fi
-          echo "✅ build.gradle configuration injected."
-
-      - name: Build APK (Release)
-        run: flutter build apk --release --split-per-abi
-        
-      - name: Create Release & Upload APK
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          files: build/app/outputs/flutter-apk/*.apk
-          generate_release_notes: true
-          draft: false
-          prerelease: false
+          name: Al-Quran-Terjemahan-v1.0.0
+          path: build/out/Al-Quran-Terjemahan-v1.0.0.apk
