@@ -65,8 +65,9 @@ void main() {
           return 1; // PermissionStatus.granted
         }
         if (methodCall.method == 'requestPermissions') {
+          // 3: Permission.locationWhenInUse, 1: PermissionStatus.granted
           return {
-            3: 1, // LocationWhenInUse: Granted
+            3: 1, 
           };
         }
         return null;
