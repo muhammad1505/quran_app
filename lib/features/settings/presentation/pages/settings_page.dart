@@ -496,18 +496,25 @@ class _SettingsPageState extends State<SettingsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const ListTile(title: Text('Pilih Suara Adzan')),
-              ...AdzanSound.values.map(
-                (sound) => RadioListTile<AdzanSound>(
-                  value: sound,
-                  groupValue: _prayerSettings.value.adzanSound,
-                  title: Text(sound.label),
-                  onChanged: (value) async {
-                    if (value == null) return;
-                    await _prayerSettings.setAdzanSound(value);
-                    if (mounted) {
-                      Navigator.pop(context);
-                    }
-                  },
+              RadioGroup<AdzanSound>(
+                groupValue: _prayerSettings.value.adzanSound,
+                onChanged: (value) async {
+                  if (value == null) return;
+                  await _prayerSettings.setAdzanSound(value);
+                  if (mounted) {
+                    Navigator.pop(context);
+                  }
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: AdzanSound.values
+                      .map(
+                        (sound) => RadioListTile<AdzanSound>(
+                          value: sound,
+                          title: Text(sound.label),
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ],
@@ -543,16 +550,23 @@ class _SettingsPageState extends State<SettingsPage> {
                   onPressed: () => Navigator.pop(context),
                 ),
               ),
-              ...AppThemeMode.values.map(
-                (mode) => RadioListTile<AppThemeMode>(
-                  value: mode,
-                  groupValue: _themeSettings.value.mode,
-                  title: Text(_themeModeLabel(mode)),
-                  onChanged: (value) {
-                    if (value == null) return;
-                    _themeSettings.setThemeMode(value);
-                    Navigator.pop(context);
-                  },
+              RadioGroup<AppThemeMode>(
+                groupValue: _themeSettings.value.mode,
+                onChanged: (value) {
+                  if (value == null) return;
+                  _themeSettings.setThemeMode(value);
+                  Navigator.pop(context);
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: AppThemeMode.values
+                      .map(
+                        (mode) => RadioListTile<AppThemeMode>(
+                          value: mode,
+                          title: Text(_themeModeLabel(mode)),
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ],

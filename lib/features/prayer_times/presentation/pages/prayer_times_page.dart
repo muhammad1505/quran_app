@@ -828,18 +828,25 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const ListTile(title: Text('Pilih Suara Adzan')),
-              ...AdzanSound.values.map(
-                (sound) => RadioListTile<AdzanSound>(
-                  value: sound,
-                  groupValue: _prayerSettings.value.adzanSound,
-                  title: Text(sound.label),
-                  onChanged: (value) async {
-                    if (value == null) return;
-                    await _prayerSettings.setAdzanSound(value);
-                    if (mounted) {
-                      Navigator.pop(context);
-                    }
-                  },
+              RadioGroup<AdzanSound>(
+                groupValue: _prayerSettings.value.adzanSound,
+                onChanged: (value) async {
+                  if (value == null) return;
+                  await _prayerSettings.setAdzanSound(value);
+                  if (mounted) {
+                    Navigator.pop(context);
+                  }
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: AdzanSound.values
+                      .map(
+                        (sound) => RadioListTile<AdzanSound>(
+                          value: sound,
+                          title: Text(sound.label),
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ],
