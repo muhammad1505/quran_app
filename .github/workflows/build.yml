@@ -41,18 +41,32 @@ jobs:
           import re
           app_name = "Al-Quran Terjemahan"
           strings_path = Path("android/app/src/main/res/values/strings.xml")
+          strings_path.parent.mkdir(parents=True, exist_ok=True)
           if strings_path.exists():
               text = strings_path.read_text()
-              if "app_name" in text:
-                  text = re.sub(r'(<string name="app_name">)(.*?)(</string>)', rf"\\1{app_name}\\3", text)
-              else:
-                  text = text.replace("</resources>", f'  <string name="app_name">{app_name}</string>\\n</resources>')
-              strings_path.write_text(text)
+          else:
+              text = "<resources>\\n</resources>\\n"
+          if "app_name" in text:
+              text = re.sub(r'(<string name="app_name">)(.*?)(</string>)', rf"\\1{app_name}\\3", text)
+          else:
+              text = text.replace("</resources>", f'  <string name="app_name">{app_name}</string>\\n</resources>')
+          strings_path.write_text(text)
           manifest_path = Path("android/app/src/main/AndroidManifest.xml")
           if manifest_path.exists():
               text = manifest_path.read_text()
               text = re.sub(r'android:label=\"[^\"]*\"', 'android:label=\"@string/app_name\"', text)
               manifest_path.write_text(text)
+          ios_plist = Path("ios/Runner/Info.plist")
+          if ios_plist.exists():
+              text = ios_plist.read_text()
+              if "CFBundleDisplayName" in text:
+                  text = re.sub(r'(<key>CFBundleDisplayName</key>\\s*<string>)(.*?)(</string>)', rf"\\1{app_name}\\3", text, flags=re.S)
+              else:
+                  text = text.replace(
+                      "</dict>",
+                      f"  <key>CFBundleDisplayName</key>\\n  <string>{app_name}</string>\\n</dict>",
+                  )
+              ios_plist.write_text(text)
           PY
           
           # Inject Gradle Config (Support Groovy and Kotlin DSL)
