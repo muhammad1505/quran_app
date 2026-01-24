@@ -6,6 +6,10 @@ on:
       - '*'
   workflow_dispatch:
 
+concurrency:
+  group: flutter-ci-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
