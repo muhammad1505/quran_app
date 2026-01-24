@@ -1201,11 +1201,27 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
               ),
               ListTile(
                 leading: const Icon(Icons.bookmark_border),
-                title: const Text('Simpan bookmark'),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Bookmark segera hadir.')),
+                title: Text(
+                  _isBookmarked(_currentAyah ?? _highlightVerse ?? 1)
+                      ? 'Hapus bookmark'
+                      : 'Simpan bookmark',
+                ),
+                onTap: () async {
+                  final navigator = Navigator.of(context);
+                  final messenger = ScaffoldMessenger.of(context);
+                  final verse = _currentAyah ?? _highlightVerse ?? 1;
+                  final wasBookmarked = _isBookmarked(verse);
+                  navigator.pop();
+                  await _toggleBookmark(verse);
+                  if (!mounted) return;
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        wasBookmarked
+                            ? 'Bookmark dihapus.'
+                            : 'Bookmark disimpan.',
+                      ),
+                    ),
                   );
                 },
               ),
@@ -1334,87 +1350,126 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   Widget _buildMiniPlayer() {
     final speed = _audioSettings.value.playbackSpeed;
     final repeatOn = _audioSettings.value.repeatOne;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color ?? Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.multitrack_audio, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              _isAyahMode && _currentAyah != null
-                  ? 'Ayat ${_currentAyah!} • ${quran.getSurahName(widget.surahNumber)}'
-                  : 'Murotal ${quran.getSurahName(widget.surahNumber)}',
-              style: Theme.of(context).textTheme.bodyMedium,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (_isAyahMode) ...[
-            IconButton(
-              onPressed: _playPreviousAyah,
-              icon: const Icon(Icons.skip_previous),
-              tooltip: 'Ayat sebelumnya',
-            ),
-            IconButton(
-              onPressed: _playNextAyah,
-              icon: const Icon(Icons.skip_next),
-              tooltip: 'Ayat berikutnya',
-            ),
-          ],
-          IconButton(
-            onPressed: () {
-              final next = !_audioSettings.value.repeatOne;
-              _audioSettings.updateRepeatOne(next);
-              _audioPlayer.setLoopMode(next ? LoopMode.one : LoopMode.off);
-              setState(() {});
-            },
-            icon: Icon(
-              repeatOn ? Icons.repeat_one : Icons.repeat,
-              color: repeatOn ? Theme.of(context).primaryColor : null,
-            ),
-            tooltip: repeatOn ? 'Repeat ayat aktif' : 'Repeat ayat',
-          ),
-          PopupMenuButton<double>(
-            onSelected: (value) {
-              _audioSettings.updatePlaybackSpeed(value);
-              _audioPlayer.setSpeed(value);
-              setState(() {});
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 0.75, child: Text('0.75x')),
-              PopupMenuItem(value: 1.0, child: Text('1.0x')),
-              PopupMenuItem(value: 1.25, child: Text('1.25x')),
-              PopupMenuItem(value: 1.5, child: Text('1.5x')),
+    return Material(
+      color: Theme.of(context).cardTheme.color ?? Colors.white,
+      child: InkWell(
+        onTap: _showAudioPlayerSheet,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardTheme.color ?? Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, -4),
+              ),
             ],
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-              ),
-              child: Text(
-                '${speed.toStringAsFixed(2).replaceAll('.00', '')}x',
-                style: TextStyle(color: Theme.of(context).primaryColor),
-              ),
-            ),
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            onPressed: _isLoading ? null : _playPause,
-            icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+          child: Row(
+            children: [
+              const Icon(Icons.multitrack_audio, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _isAyahMode && _currentAyah != null
+                      ? 'Ayat ${_currentAyah!} • ${quran.getSurahName(widget.surahNumber)}'
+                      : 'Murotal ${quran.getSurahName(widget.surahNumber)}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (_isAyahMode) ...[
+                IconButton(
+                  onPressed: _playPreviousAyah,
+                  icon: const Icon(Icons.skip_previous),
+                  tooltip: 'Ayat sebelumnya',
+                ),
+                IconButton(
+                  onPressed: _playNextAyah,
+                  icon: const Icon(Icons.skip_next),
+                  tooltip: 'Ayat berikutnya',
+                ),
+              ],
+              IconButton(
+                onPressed: () {
+                  final next = !_audioSettings.value.repeatOne;
+                  _audioSettings.updateRepeatOne(next);
+                  _audioPlayer.setLoopMode(next ? LoopMode.one : LoopMode.off);
+                  setState(() {});
+                },
+                icon: Icon(
+                  repeatOn ? Icons.repeat_one : Icons.repeat,
+                  color: repeatOn ? Theme.of(context).primaryColor : null,
+                ),
+                tooltip: repeatOn ? 'Repeat ayat aktif' : 'Repeat ayat',
+              ),
+              PopupMenuButton<double>(
+                onSelected: (value) {
+                  _audioSettings.updatePlaybackSpeed(value);
+                  _audioPlayer.setSpeed(value);
+                  setState(() {});
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 0.75, child: Text('0.75x')),
+                  PopupMenuItem(value: 1.0, child: Text('1.0x')),
+                  PopupMenuItem(value: 1.25, child: Text('1.25x')),
+                  PopupMenuItem(value: 1.5, child: Text('1.5x')),
+                ],
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                  ),
+                  child: Text(
+                    '${speed.toStringAsFixed(2).replaceAll('.00', '')}x',
+                    style: TextStyle(color: Theme.of(context).primaryColor),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: _isLoading ? null : _playPause,
+                icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  void _showAudioPlayerSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return _AudioPlayerSheet(
+          player: _audioPlayer,
+          surahNumber: widget.surahNumber,
+          isAyahMode: _isAyahMode,
+          currentAyah: _currentAyah,
+          isPlaying: _isPlaying,
+          isLoading: _isLoading,
+          repeatOne: _audioSettings.value.repeatOne,
+          speed: _audioSettings.value.playbackSpeed,
+          onPlayPause: _playPause,
+          onNextAyah: _isAyahMode ? _playNextAyah : null,
+          onPrevAyah: _isAyahMode ? _playPreviousAyah : null,
+          onToggleRepeat: () {
+            final next = !_audioSettings.value.repeatOne;
+            _audioSettings.updateRepeatOne(next);
+            _audioPlayer.setLoopMode(next ? LoopMode.one : LoopMode.off);
+            if (mounted) setState(() {});
+          },
+          onSpeedChanged: (value) {
+            _audioSettings.updatePlaybackSpeed(value);
+            _audioPlayer.setSpeed(value);
+            if (mounted) setState(() {});
+          },
+        );
+      },
     );
   }
 
@@ -1874,6 +1929,8 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
+    final currentVerse = _currentAyah ?? _highlightVerse ?? 1;
+    final isBookmarked = _isBookmarked(currentVerse);
     return Scaffold(
       appBar: AppBar(
         title: Text(quran.getSurahName(widget.surahNumber)),
@@ -1895,13 +1952,21 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
             tooltip: "Audio",
           ),
           IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Bookmark ayat segera hadir.')),
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final wasBookmarked = isBookmarked;
+              await _toggleBookmark(currentVerse);
+              if (!mounted) return;
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(
+                    wasBookmarked ? 'Bookmark dihapus.' : 'Bookmark disimpan.',
+                  ),
+                ),
               );
             },
-            icon: const Icon(Icons.bookmark_border),
-            tooltip: "Bookmark",
+            icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border),
+            tooltip: isBookmarked ? "Hapus Bookmark" : "Simpan Bookmark",
           ),
           IconButton(
             onPressed: _showReaderMoreSheet,
@@ -2112,4 +2177,215 @@ class _BookmarkData {
   final List<BookmarkFolder> folders;
 
   const _BookmarkData({required this.bookmarks, required this.folders});
+}
+
+class _AudioPlayerSheet extends StatelessWidget {
+  final AudioPlayer player;
+  final int surahNumber;
+  final bool isAyahMode;
+  final int? currentAyah;
+  final bool isPlaying;
+  final bool isLoading;
+  final bool repeatOne;
+  final double speed;
+  final VoidCallback onPlayPause;
+  final VoidCallback? onNextAyah;
+  final VoidCallback? onPrevAyah;
+  final VoidCallback onToggleRepeat;
+  final ValueChanged<double> onSpeedChanged;
+
+  const _AudioPlayerSheet({
+    required this.player,
+    required this.surahNumber,
+    required this.isAyahMode,
+    required this.currentAyah,
+    required this.isPlaying,
+    required this.isLoading,
+    required this.repeatOne,
+    required this.speed,
+    required this.onPlayPause,
+    required this.onNextAyah,
+    required this.onPrevAyah,
+    required this.onToggleRepeat,
+    required this.onSpeedChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final title = isAyahMode && currentAyah != null
+        ? 'Ayat ${currentAyah!} • ${quran.getSurahName(surahNumber)}'
+        : 'Murotal ${quran.getSurahName(surahNumber)}';
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.85,
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            StreamBuilder<Duration?>(
+              stream: player.durationStream,
+              builder: (context, snapshot) {
+                final duration = snapshot.data ?? Duration.zero;
+                return StreamBuilder<Duration>(
+                  stream: player.positionStream,
+                  builder: (context, positionSnapshot) {
+                    final position = positionSnapshot.data ?? Duration.zero;
+                    final max = duration.inMilliseconds.toDouble();
+                    final value = position.inMilliseconds.toDouble();
+                    return Column(
+                      children: [
+                        Slider(
+                          value: max > 0 ? value.clamp(0, max) : 0,
+                          max: max > 0 ? max : 1,
+                          onChanged: max > 0
+                              ? (val) {
+                                  player.seek(
+                                    Duration(milliseconds: val.round()),
+                                  );
+                                }
+                              : null,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Row(
+                            children: [
+                              Text(_formatDuration(position)),
+                              const Spacer(),
+                              Text(_formatDuration(duration)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  onPressed: onPrevAyah,
+                  icon: const Icon(Icons.skip_previous),
+                ),
+                const SizedBox(width: 12),
+                IconButton(
+                  onPressed: isLoading ? null : onPlayPause,
+                  icon: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+                  iconSize: 32,
+                ),
+                const SizedBox(width: 12),
+                IconButton(
+                  onPressed: onNextAyah,
+                  icon: const Icon(Icons.skip_next),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: onToggleRepeat,
+                    icon: Icon(
+                      repeatOne ? Icons.repeat_one : Icons.repeat,
+                      color:
+                          repeatOne ? Theme.of(context).primaryColor : null,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  PopupMenuButton<double>(
+                    onSelected: onSpeedChanged,
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 0.75, child: Text('0.75x')),
+                      PopupMenuItem(value: 1.0, child: Text('1.0x')),
+                      PopupMenuItem(value: 1.25, child: Text('1.25x')),
+                      PopupMenuItem(value: 1.5, child: Text('1.5x')),
+                    ],
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color:
+                            Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                      ),
+                      child: Text(
+                        '${speed.toStringAsFixed(2).replaceAll('.00', '')}x',
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (isAyahMode)
+                    Text(
+                      'Mode Ayat',
+                      style: Theme.of(context).textTheme.labelMedium,
+                    )
+                  else
+                    Text(
+                      'Mode Surah',
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                ],
+              ),
+            ),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Text(
+                'Ketuk mini player untuk membuka panel ini.',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:quran_app/core/services/asmaul_husna_service.dart';
+import 'package:quran_app/core/services/tts_service.dart';
 
 class AsmaulDetailPage extends StatelessWidget {
   final AsmaulHusnaItem item;
@@ -65,9 +67,13 @@ class AsmaulDetailPage extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Audio pelafalan segera hadir.')),
+                  onPressed: () async {
+                    final text = meaning.isNotEmpty
+                        ? '${item.transliteration}. $meaning'
+                        : item.transliteration;
+                    await TtsService.instance.speak(
+                      text,
+                      language: showEnglish ? 'en-US' : 'id-ID',
                     );
                   },
                   icon: const Icon(Icons.play_arrow),
@@ -78,8 +84,8 @@ class AsmaulDetailPage extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Bagikan segera hadir.')),
+                    Share.share(
+                      'Asmaul Husna: ${item.transliteration}\n\n${item.arabic}\n$meaning',
                     );
                   },
                   icon: const Icon(Icons.share_outlined),

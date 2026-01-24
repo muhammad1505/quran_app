@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:quran_app/core/services/asmaul_husna_service.dart';
+import 'package:quran_app/core/services/doa_favorite_service.dart';
+import 'package:quran_app/core/services/tts_service.dart';
 import 'package:quran_app/features/asmaul_husna/presentation/pages/asmaul_detail_page.dart';
 
 class DoaPage extends StatefulWidget {
@@ -14,22 +17,27 @@ class DoaPage extends StatefulWidget {
 class _DoaPageState extends State<DoaPage> {
   final List<DoaItem> _doas = const [
     DoaItem(
+      id: 'pagi',
       title: 'Doa Pagi',
       arabic: 'اَللّٰهُمَّ بِكَ أَصْبَحْنَا وَبِكَ أَمْسَيْنَا',
       latin: 'Allahumma bika asbahna wa bika amsayna.',
-      translation: 'Ya Allah, dengan-Mu kami memasuki pagi dan dengan-Mu kami memasuki petang.',
+      translation:
+          'Ya Allah, dengan-Mu kami memasuki pagi dan dengan-Mu kami memasuki petang.',
       category: 'Pagi',
       source: 'HR. Abu Dawud',
     ),
     DoaItem(
+      id: 'petang',
       title: 'Doa Petang',
       arabic: 'اَللّٰهُمَّ بِكَ أَمْسَيْنَا وَبِكَ أَصْبَحْنَا',
       latin: 'Allahumma bika amsayna wa bika asbahna.',
-      translation: 'Ya Allah, dengan-Mu kami memasuki petang dan dengan-Mu kami memasuki pagi.',
+      translation:
+          'Ya Allah, dengan-Mu kami memasuki petang dan dengan-Mu kami memasuki pagi.',
       category: 'Malam',
       source: 'HR. Abu Dawud',
     ),
     DoaItem(
+      id: 'masuk_masjid',
       title: 'Doa Masuk Masjid',
       arabic: 'اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ',
       latin: 'Allahummaftah li abwaba rahmatik.',
@@ -38,6 +46,7 @@ class _DoaPageState extends State<DoaPage> {
       source: 'HR. Muslim',
     ),
     DoaItem(
+      id: 'keluar_masjid',
       title: 'Doa Keluar Masjid',
       arabic: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ',
       latin: 'Allahumma inni as\'aluka min fadhlik.',
@@ -46,12 +55,106 @@ class _DoaPageState extends State<DoaPage> {
       source: 'HR. Muslim',
     ),
     DoaItem(
+      id: 'sebelum_makan',
       title: 'Doa Sebelum Makan',
-      arabic: 'اللَّهُمَّ بَارِكْ لَنَا فِيمَا رَزَقْتَنَا',
-      latin: 'Allahumma barik lana fima razaqtana.',
-      translation: 'Ya Allah, berkahilah rezeki yang Engkau berikan kepada kami.',
+      arabic: 'بِسْمِ اللَّهِ',
+      latin: 'Bismillah.',
+      translation: 'Dengan nama Allah.',
       category: 'Makan',
-      source: 'HR. Tirmidzi',
+    ),
+    DoaItem(
+      id: 'sesudah_makan',
+      title: 'Doa Sesudah Makan',
+      arabic: 'الْحَمْدُ لِلَّهِ الَّذِي أَطْعَمَنِي هَذَا وَرَزَقَنِيهِ',
+      latin: 'Alhamdu lillahil-ladzi ath\'amani hadza wa razaqanih.',
+      translation:
+          'Segala puji bagi Allah yang telah memberi makan ini dan memberinya rezeki kepadaku.',
+      category: 'Makan',
+    ),
+    DoaItem(
+      id: 'sebelum_tidur',
+      title: 'Doa Sebelum Tidur',
+      arabic: 'بِاسْمِكَ اللَّهُمَّ أَحْيَا وَأَمُوتُ',
+      latin: 'Bismikallahumma ahya wa amut.',
+      translation: 'Dengan nama-Mu ya Allah aku hidup dan aku mati.',
+      category: 'Malam',
+    ),
+    DoaItem(
+      id: 'bangun_tidur',
+      title: 'Doa Bangun Tidur',
+      arabic:
+          'الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ',
+      latin:
+          'Alhamdu lillahil-ladzi ahyana ba\'da ma amatana wa ilaihin nusyur.',
+      translation:
+          'Segala puji bagi Allah yang menghidupkan kami setelah mematikan kami, dan kepada-Nya kebangkitan.',
+      category: 'Pagi',
+    ),
+    DoaItem(
+      id: 'masuk_rumah',
+      title: 'Doa Masuk Rumah',
+      arabic:
+          'بِسْمِ اللَّهِ وَلَجْنَا وَبِسْمِ اللَّهِ خَرَجْنَا وَعَلَى رَبِّنَا تَوَكَّلْنَا',
+      latin:
+          'Bismillahi walajna wa bismillahi kharajna wa \'ala rabbina tawakkalna.',
+      translation:
+          'Dengan nama Allah kami masuk, dengan nama Allah kami keluar, dan kepada Tuhan kami bertawakal.',
+      category: 'Rumah',
+    ),
+    DoaItem(
+      id: 'keluar_rumah',
+      title: 'Doa Keluar Rumah',
+      arabic:
+          'بِسْمِ اللَّهِ تَوَكَّلْتُ عَلَى اللَّهِ، لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ',
+      latin:
+          'Bismillahi tawakkaltu \'alallah, la hawla wa la quwwata illa billah.',
+      translation:
+          'Dengan nama Allah aku bertawakal kepada Allah, tiada daya dan kekuatan kecuali dengan Allah.',
+      category: 'Rumah',
+    ),
+    DoaItem(
+      id: 'naik_kendaraan',
+      title: 'Doa Naik Kendaraan',
+      arabic:
+          'سُبْحَانَ الَّذِي سَخَّرَ لَنَا هَٰذَا وَمَا كُنَّا لَهُ مُقْرِنِينَ وَإِنَّا إِلَى رَبِّنَا لَمُنْقَلِبُونَ',
+      latin:
+          'Subhanalladzi sakhkhara lana hadza wa ma kunna lahu muqrinin wa inna ila rabbina lamunqalibun.',
+      translation:
+          'Maha suci Allah yang telah menundukkan ini bagi kami, padahal kami sebelumnya tidak mampu menguasainya, dan kepada Tuhan kami akan kembali.',
+      category: 'Perjalanan',
+    ),
+    DoaItem(
+      id: 'masuk_kamar_mandi',
+      title: 'Doa Masuk Kamar Mandi',
+      arabic: 'اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبُثِ وَالْخَبَائِثِ',
+      latin: 'Allahumma inni a\'udzu bika minal khubutsi wal khaba\'its.',
+      translation: 'Ya Allah, aku berlindung kepada-Mu dari setan laki-laki dan perempuan.',
+      category: 'Kebersihan',
+    ),
+    DoaItem(
+      id: 'keluar_kamar_mandi',
+      title: 'Doa Keluar Kamar Mandi',
+      arabic: 'غُفْرَانَكَ',
+      latin: 'Ghufranaka.',
+      translation: 'Aku memohon ampunan-Mu.',
+      category: 'Kebersihan',
+    ),
+    DoaItem(
+      id: 'ilmu',
+      title: 'Doa Memohon Ilmu',
+      arabic: 'رَبِّ زِدْنِي عِلْمًا',
+      latin: 'Rabbi zidni \'ilma.',
+      translation: 'Ya Rabb, tambahkanlah aku ilmu.',
+      category: 'Belajar',
+    ),
+    DoaItem(
+      id: 'sakit',
+      title: 'Doa Kesembuhan',
+      arabic: 'اللَّهُمَّ رَبَّ النَّاسِ أَذْهِبِ الْبَأْسَ اشْفِ أَنْتَ الشَّافِي',
+      latin: 'Allahumma rabban-nas adzhibil ba\'sa isyfi antas syafi.',
+      translation:
+          'Ya Allah, Tuhan manusia, hilangkanlah penyakit dan sembuhkanlah; Engkau adalah Maha Penyembuh.',
+      category: 'Sakit',
     ),
   ];
 
@@ -79,12 +182,40 @@ class _DoaPageState extends State<DoaPage> {
   late final List<_DzikirProgress> _dzikirProgress;
 
   String _selectedCategory = 'Semua';
+  Set<String> _favoriteIds = {};
+  bool _isAsmaulPlayingAll = false;
+  bool _stopAsmaulRequested = false;
 
   @override
   void initState() {
     super.initState();
     _dzikirProgress =
         List.generate(_dzikirItems.length, (_) => const _DzikirProgress());
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    final favorites = await DoaFavoriteService.instance.getFavorites();
+    if (!mounted) return;
+    setState(() => _favoriteIds = favorites);
+  }
+
+  bool _isFavorite(DoaItem doa) => _favoriteIds.contains(doa.id);
+
+  Future<void> _toggleFavorite(DoaItem doa) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final updated = await DoaFavoriteService.instance.toggle(doa.id);
+    if (!mounted) return;
+    setState(() => _favoriteIds = updated);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          updated.contains(doa.id)
+              ? 'Disimpan ke favorit.'
+              : 'Dihapus dari favorit.',
+        ),
+      ),
+    );
   }
 
   List<String> get _categories {
@@ -99,6 +230,31 @@ class _DoaPageState extends State<DoaPage> {
 
   int get _completedDzikir =>
       _dzikirProgress.where((item) => item.completed).length;
+
+  Future<void> _toggleAsmaulPlayAll(List<AsmaulHusnaItem> items) async {
+    if (_isAsmaulPlayingAll) {
+      _stopAsmaulRequested = true;
+      await TtsService.instance.stop();
+      if (mounted) {
+        setState(() => _isAsmaulPlayingAll = false);
+      }
+      return;
+    }
+    setState(() {
+      _isAsmaulPlayingAll = true;
+      _stopAsmaulRequested = false;
+    });
+    for (final item in items) {
+      if (_stopAsmaulRequested) break;
+      final text = item.meaningId.isNotEmpty
+          ? '${item.transliteration}. ${item.meaningId}'
+          : item.transliteration;
+      await TtsService.instance.speak(text, language: 'id-ID');
+    }
+    if (mounted) {
+      setState(() => _isAsmaulPlayingAll = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -154,6 +310,7 @@ class _DoaPageState extends State<DoaPage> {
   }
 
   Widget _buildDoaCard(BuildContext context, DoaItem doa) {
+    final isFavorite = _isFavorite(doa);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -195,20 +352,17 @@ class _DoaPageState extends State<DoaPage> {
               Row(
                 children: [
                   TextButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Disimpan ke favorit.')),
-                      );
-                    },
-                    icon: const Icon(Icons.bookmark_border, size: 18),
-                    label: const Text('Simpan'),
+                    onPressed: () => _toggleFavorite(doa),
+                    icon: Icon(
+                      isFavorite ? Icons.bookmark : Icons.bookmark_border,
+                      size: 18,
+                    ),
+                    label: Text(isFavorite ? 'Favorit' : 'Simpan'),
                   ),
                   const SizedBox(width: 8),
                   TextButton.icon(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Bagikan segera hadir.')),
-                      );
+                      Share.share(_doaShareText(doa));
                     },
                     icon: const Icon(Icons.share_outlined, size: 18),
                     label: const Text('Bagikan'),
@@ -280,13 +434,16 @@ class _DoaPageState extends State<DoaPage> {
                 ),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Putar semua segera hadir.')),
-                    );
-                  },
-                  icon: const Icon(Icons.play_circle_outline, size: 18),
-                  label: const Text('Putar semua'),
+                  onPressed: () => _toggleAsmaulPlayAll(items),
+                  icon: Icon(
+                    _isAsmaulPlayingAll
+                        ? Icons.stop_circle_outlined
+                        : Icons.play_circle_outline,
+                    size: 18,
+                  ),
+                  label: Text(
+                    _isAsmaulPlayingAll ? 'Hentikan' : 'Putar semua',
+                  ),
                 ),
               ],
             ),
@@ -320,6 +477,7 @@ class _DoaPageState extends State<DoaPage> {
 }
 
 class DoaItem {
+  final String id;
   final String title;
   final String arabic;
   final String latin;
@@ -328,6 +486,7 @@ class DoaItem {
   final String source;
 
   const DoaItem({
+    required this.id,
     required this.title,
     required this.arabic,
     this.latin = '',
@@ -392,9 +551,13 @@ class DoaDetailPage extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Audio doa segera hadir.')),
+                  onPressed: () async {
+                    final text = doa.latin.isNotEmpty
+                        ? doa.latin
+                        : doa.translation;
+                    await TtsService.instance.speak(
+                      text,
+                      language: 'id-ID',
                     );
                   },
                   icon: const Icon(Icons.play_arrow),
@@ -405,9 +568,7 @@ class DoaDetailPage extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Bagikan segera hadir.')),
-                    );
+                    Share.share(_doaShareText(doa));
                   },
                   icon: const Icon(Icons.share_outlined),
                   label: const Text('Bagikan'),
@@ -527,4 +688,21 @@ class _DzikirProgress {
       completed: completed ?? this.completed,
     );
   }
+}
+
+String _doaShareText(DoaItem doa) {
+  final buffer = StringBuffer()
+    ..writeln(doa.title)
+    ..writeln()
+    ..writeln(doa.arabic);
+  if (doa.latin.isNotEmpty) {
+    buffer.writeln(doa.latin);
+  }
+  buffer
+    ..writeln()
+    ..writeln(doa.translation);
+  if (doa.source.isNotEmpty) {
+    buffer.writeln('Sumber: ${doa.source}');
+  }
+  return buffer.toString().trim();
 }

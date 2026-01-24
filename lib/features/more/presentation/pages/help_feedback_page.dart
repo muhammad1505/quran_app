@@ -19,9 +19,10 @@ class _HelpFeedbackPageState extends State<HelpFeedbackPage> {
   }
 
   Future<void> _copyText(String text) async {
+    final messenger = ScaffoldMessenger.of(context);
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.showSnackBar(
       const SnackBar(content: Text('Teks disalin.')),
     );
   }

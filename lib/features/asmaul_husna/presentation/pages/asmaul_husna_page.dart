@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:quran_app/core/services/asmaul_husna_service.dart';
+import 'package:quran_app/core/services/tts_service.dart';
 import 'package:quran_app/features/asmaul_husna/presentation/pages/asmaul_detail_page.dart';
 
 class AsmaulHusnaPage extends StatefulWidget {
@@ -13,6 +14,36 @@ class AsmaulHusnaPage extends StatefulWidget {
 
 class _AsmaulHusnaPageState extends State<AsmaulHusnaPage> {
   bool _showEnglish = false;
+  bool _isPlayingAll = false;
+  bool _stopRequested = false;
+
+  Future<void> _togglePlayAll(List<AsmaulHusnaItem> items) async {
+    if (_isPlayingAll) {
+      _stopRequested = true;
+      await TtsService.instance.stop();
+      if (mounted) {
+        setState(() => _isPlayingAll = false);
+      }
+      return;
+    }
+    setState(() {
+      _isPlayingAll = true;
+      _stopRequested = false;
+    });
+    for (final item in items) {
+      if (_stopRequested) break;
+      final meaning = _showEnglish ? item.meaningEn : item.meaningId;
+      final text =
+          meaning.isNotEmpty ? '${item.transliteration}. $meaning' : item.transliteration;
+      await TtsService.instance.speak(
+        text,
+        language: _showEnglish ? 'en-US' : 'id-ID',
+      );
+    }
+    if (mounted) {
+      setState(() => _isPlayingAll = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,15 +103,15 @@ class _AsmaulHusnaPageState extends State<AsmaulHusnaPage> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Putar semua segera hadir.'),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.play_circle_outline, size: 18),
-                        label: const Text('Putar semua'),
+                        onPressed: () => _togglePlayAll(items),
+                        icon: Icon(
+                          _isPlayingAll
+                              ? Icons.stop_circle_outlined
+                              : Icons.play_circle_outline,
+                          size: 18,
+                        ),
+                        label:
+                            Text(_isPlayingAll ? 'Hentikan' : 'Putar semua'),
                       ),
                     ),
                   ],
