@@ -14,7 +14,11 @@ jobs:
   test:
     name: Run Tests & Analyze
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
+
+    concurrency:
+      group: flutter-test-${{ github.ref }}
+      cancel-in-progress: false
     
     steps:
       - uses: actions/checkout@v4
