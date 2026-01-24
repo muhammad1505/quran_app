@@ -21,6 +21,14 @@ jobs:
       - name: Scaffold Platform Support
         run: flutter create .
 
+      - name: Inject Android Configuration
+        run: |
+          # Inject Permissions
+          sed -i 's|<uses-permission android:name="android.permission.INTERNET"/>|<uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/><uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/><uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>|' android/app/src/main/AndroidManifest.xml
+          
+          # Inject Gradle Config
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle
+
       - name: Analyze
         run: flutter analyze
 
