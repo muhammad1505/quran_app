@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:path_provider/path_provider.dart';
 
 import 'package:quran_app/core/settings/quran_settings.dart';
 
@@ -45,6 +46,34 @@ class TafsirService {
     return cache.isNotEmpty;
   }
 
+  Future<TafsirCacheInfo> getCacheInfo(TafsirSource source) async {
+    final dir = await _cacheDir(source);
+    if (!dir.existsSync()) {
+      return const TafsirCacheInfo(count: 0, bytes: 0);
+    }
+    var count = 0;
+    var bytes = 0;
+    for (final entity in dir.listSync()) {
+      if (entity is File && entity.path.endsWith('.json')) {
+        count += 1;
+        bytes += await entity.length();
+      }
+    }
+    return TafsirCacheInfo(count: count, bytes: bytes);
+  }
+
+  Future<void> clearCache(TafsirSource source) async {
+    final dir = await _cacheDir(source);
+    if (dir.existsSync()) {
+      await dir.delete(recursive: true);
+    }
+  }
+
+  Future<void> downloadSurah(TafsirSource source, int surah) async {
+    final map = await _fetchBySource(source, surah);
+    await _saveCacheFile(source, surah, map);
+  }
+
   Future<TafsirEntry?> getTafsir({
     required int surah,
     required int ayah,
@@ -59,6 +88,11 @@ class TafsirService {
         sourceLabel: 'Tafsir offline (lokal)',
         offline: true,
       );
+    }
+    final cached = await _loadCachedSource(source, surah);
+    final cachedEntry = cached['$surah:$ayah'];
+    if (cachedEntry != null) {
+      return cachedEntry;
     }
     switch (source) {
       case TafsirSource.equran:
@@ -118,6 +152,20 @@ class TafsirService {
     });
   }
 
+  Future<Map<String, TafsirEntry>> _fetchBySource(
+    TafsirSource source,
+    int surah,
+  ) {
+    switch (source) {
+      case TafsirSource.equran:
+        return _fetchEquran(surah);
+      case TafsirSource.gading:
+        return _fetchGading(surah);
+      case TafsirSource.kemenag:
+        return Future.value({});
+    }
+  }
+
   Future<Map<String, TafsirEntry>> _fetchWithCache(
     String key,
     Future<Map<String, TafsirEntry>> Function() loader,
@@ -147,4 +195,74 @@ class TafsirService {
     final body = await response.transform(utf8.decoder).join();
     return jsonDecode(body);
   }
+
+  Future<Directory> _cacheDir(TafsirSource source) async {
+    final dir = await getApplicationDocumentsDirectory();
+    return Directory('${dir.path}/tafsir/${source.name}');
+  }
+
+  Future<Map<String, TafsirEntry>> _loadCachedSource(
+    TafsirSource source,
+    int surah,
+  ) async {
+    final file = await _cacheFile(source, surah);
+    if (!file.existsSync()) return {};
+    try {
+      final raw = await file.readAsString();
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      final result = <String, TafsirEntry>{};
+      decoded.forEach((key, value) {
+        final entry = value as Map<String, dynamic>;
+        result[key] = TafsirEntry(
+          short: entry['short']?.toString(),
+          long: entry['long']?.toString(),
+          sourceLabel: _sourceLabel(source),
+          offline: true,
+        );
+      });
+      return result;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> _saveCacheFile(
+    TafsirSource source,
+    int surah,
+    Map<String, TafsirEntry> entries,
+  ) async {
+    final file = await _cacheFile(source, surah);
+    await file.parent.create(recursive: true);
+    final map = <String, dynamic>{};
+    entries.forEach((key, value) {
+      map[key] = {
+        'short': value.short,
+        'long': value.long,
+      };
+    });
+    await file.writeAsString(jsonEncode(map));
+  }
+
+  Future<File> _cacheFile(TafsirSource source, int surah) async {
+    final dir = await _cacheDir(source);
+    return File('${dir.path}/surah_$surah.json');
+  }
+
+  String _sourceLabel(TafsirSource source) {
+    switch (source) {
+      case TafsirSource.equran:
+        return 'EQuran.id (Tafsir Kemenag)';
+      case TafsirSource.gading:
+        return 'Quran Gading (Tafsir Kemenag)';
+      case TafsirSource.kemenag:
+        return 'Kemenag RI (API resmi)';
+    }
+  }
+}
+
+class TafsirCacheInfo {
+  final int count;
+  final int bytes;
+
+  const TafsirCacheInfo({required this.count, required this.bytes});
 }

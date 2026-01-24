@@ -23,6 +23,10 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
   int _downloadedCount = 0;
   String _audioSizeLabel = '-';
   bool _tafsirAvailable = false;
+  int _tafsirCount = 0;
+  String _tafsirSizeLabel = '-';
+  bool _isTafsirDownloading = false;
+  double _tafsirProgress = 0;
   bool _isLoading = true;
 
   @override
@@ -46,11 +50,15 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
         await AudioCacheService.instance.listDownloadedSurahs(qariId);
     final audioSize = await _calculateAudioSize(qariId);
     final tafsirReady = await TafsirService.instance.hasOfflineData();
+    final tafsirCache = await TafsirService.instance
+        .getCacheInfo(QuranSettingsController.instance.value.tafsirSource);
     if (!mounted) return;
     setState(() {
       _downloadedCount = downloaded.length;
       _audioSizeLabel = _formatBytes(audioSize);
       _tafsirAvailable = tafsirReady;
+      _tafsirCount = tafsirCache.count;
+      _tafsirSizeLabel = _formatBytes(tafsirCache.bytes);
       _isLoading = false;
     });
   }
@@ -78,6 +86,7 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
   @override
   Widget build(BuildContext context) {
     final translationInfo = _translationStatus();
+    final tafsirSource = QuranSettingsController.instance.value.tafsirSource;
     return Scaffold(
       appBar: AppBar(title: const Text('Unduhan Offline')),
       body: _isLoading
@@ -119,9 +128,51 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
                 _statusTile(
                   title: 'Tafsir Indonesia',
                   subtitle: _tafsirAvailable
-                      ? 'Tersedia offline'
-                      : 'Tambahkan assets/tafsir_id.json',
+                      ? 'Tersedia offline (lokal)'
+                      : 'Sumber: ${tafsirSource.label}',
                   available: _tafsirAvailable,
+                ),
+                Card(
+                  child: ListTile(
+                    title: const Text('Cache Tafsir'),
+                    subtitle: Text('$_tafsirCount/114 surah • $_tafsirSizeLabel'),
+                    trailing: _isTafsirDownloading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (_isTafsirDownloading)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: LinearProgressIndicator(value: _tafsirProgress),
+                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isTafsirDownloading
+                            ? null
+                            : () => _downloadTafsirPack(tafsirSource),
+                        icon: const Icon(Icons.download),
+                        label: const Text('Unduh Tafsir'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isTafsirDownloading
+                            ? null
+                            : () => _clearTafsirCache(tafsirSource),
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Hapus Cache'),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 _sectionTitle('Audio Murotal'),
@@ -203,6 +254,58 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
       kingFahadAvailable: kingFahadAvailable,
       sabiqAvailable: sabiqAvailable,
     );
+  }
+
+  Future<void> _downloadTafsirPack(TafsirSource source) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Unduh Tafsir'),
+        content: Text(
+          'Ini akan mengunduh tafsir 114 surah dari ${source.label}. Lanjutkan?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Lanjut'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() {
+      _isTafsirDownloading = true;
+      _tafsirProgress = 0;
+    });
+    try {
+      for (var surah = 1; surah <= 114; surah++) {
+        await TafsirService.instance.downloadSurah(source, surah);
+        if (!mounted) return;
+        setState(() {
+          _tafsirProgress = surah / 114;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mengunduh tafsir: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isTafsirDownloading = false);
+        _refresh();
+      }
+    }
+  }
+
+  Future<void> _clearTafsirCache(TafsirSource source) async {
+    await TafsirService.instance.clearCache(source);
+    await _refresh();
   }
 }
 
