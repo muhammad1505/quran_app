@@ -177,6 +177,32 @@ class PrayerNotificationService {
     final body = 'Saatnya sholat ${_prayerName(prayer)}';
     final scheduled = tz.TZDateTime.from(time, tz.local);
 
+    final details = _notificationDetails(settings, withSound: true);
+    var success = await _scheduleZonedWithFallback(
+      id: id,
+      title: title,
+      body: body,
+      scheduled: scheduled,
+      details: details,
+    );
+    if (!success && settings.adzanSound != AdzanSound.defaultTone) {
+      final fallbackDetails = _notificationDetails(settings, withSound: false);
+      await _scheduleZonedWithFallback(
+        id: id,
+        title: title,
+        body: body,
+        scheduled: scheduled,
+        details: fallbackDetails,
+      );
+    }
+  }
+
+  NotificationDetails _notificationDetails(
+    PrayerSettings settings, {
+    required bool withSound,
+  }) {
+    final androidSound =
+        withSound ? _androidSound(settings.adzanSound) : null;
     final androidDetails = AndroidNotificationDetails(
       'prayer_times',
       'Jadwal Sholat',
@@ -184,23 +210,27 @@ class PrayerNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       playSound: !settings.silentMode,
+      sound: settings.silentMode ? null : androidSound,
     );
     final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentSound: !settings.silentMode,
     );
-    final details = NotificationDetails(
+    return NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
+  }
 
-    await _scheduleZonedWithFallback(
-      id: id,
-      title: title,
-      body: body,
-      scheduled: scheduled,
-      details: details,
-    );
+  AndroidNotificationSound? _androidSound(AdzanSound sound) {
+    switch (sound) {
+      case AdzanSound.makkah:
+        return const RawResourceAndroidNotificationSound('azan_makkah');
+      case AdzanSound.madinah:
+        return const RawResourceAndroidNotificationSound('azan_madinah');
+      case AdzanSound.defaultTone:
+        return null;
+    }
   }
 
   int _notificationId(Prayer prayer) {

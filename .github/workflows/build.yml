@@ -133,6 +133,12 @@ jobs:
             exit 1
           fi
 
+      - name: Prepare Adzan Audio
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          bash tools/prepare_adzan_assets.sh
+
       - name: Generate App Icons
         run: flutter pub run flutter_launcher_icons
 
