@@ -1440,9 +1440,9 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
       await _loadBookmarks();
       if (!mounted) return;
     }
-    final sheetContext = context;
+    if (!mounted) return;
     showModalBottomSheet(
-      context: sheetContext,
+      context: context,
       builder: (context) {
         return SafeArea(
           child: Column(
