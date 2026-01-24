@@ -163,9 +163,9 @@ class BackupService {
     final coordinates = Coordinates(lat, lng);
     final now = DateTime.now();
     final today = PrayerTimes.today(coordinates, params);
-    final tomorrow = PrayerTimes.forDate(
-      DateComponents.from(now.add(const Duration(days: 1))),
+    final tomorrow = PrayerTimes(
       coordinates,
+      DateComponents.from(now.add(const Duration(days: 1))),
       params,
     );
     await PrayerNotificationService.instance.schedulePrayerTimes(
