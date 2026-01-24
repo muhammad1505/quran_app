@@ -1909,10 +1909,15 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/$fileName');
       await file.writeAsBytes(pngBytes);
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: subject,
-      );
+      try {
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          text: subject,
+        );
+      } on LateInitializationError catch (e) {
+        if (!e.toString().contains('localResult')) rethrow;
+        // Some devices throw this even though the share sheet opens.
+      }
     } catch (e) {
       if (!mounted) return;
       messenger?.showSnackBar(
