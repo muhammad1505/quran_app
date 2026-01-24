@@ -42,11 +42,18 @@ jobs:
                   1,
               )
           if "desugar_jdk_libs" not in text:
-              text = text.replace(
-                  "dependencies {",
-                  "dependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'",
-                  1,
-              )
+              if "dependencies {" in text:
+                  text = text.replace(
+                      "dependencies {",
+                      "dependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'",
+                      1,
+                  )
+              else:
+                  text += (
+                      "\n\ndependencies {\n"
+                      "    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'\n"
+                      "}\n"
+                  )
           path.write_text(text)
           PY
           elif [ -f "android/app/build.gradle.kts" ]; then
@@ -63,11 +70,18 @@ jobs:
                   1,
               )
           if "desugar_jdk_libs" not in text:
-              text = text.replace(
-                  "dependencies {",
-                  "dependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")",
-                  1,
-              )
+              if "dependencies {" in text:
+                  text = text.replace(
+                      "dependencies {",
+                      "dependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")",
+                      1,
+                  )
+              else:
+                  text += (
+                      "\n\ndependencies {\n"
+                      "    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")\n"
+                      "}\n"
+                  )
           path.write_text(text)
           PY
           else
