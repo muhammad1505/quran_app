@@ -9,12 +9,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+
+      - name: Prepare Release Metadata
+        run: |
+          echo "APP_NAME=Al-Quran Terjemahan" >> $GITHUB_ENV
+          echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+          echo "APK_NAME=Al-Quran Terjemahan ${GITHUB_REF_NAME}.apk" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: flutter pub get
@@ -26,6 +34,26 @@ jobs:
         run: |
           # Inject Permissions
           sed -i 's|</manifest>|<uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/><uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/><uses-permission android:name="android.permission.POST_NOTIFICATIONS"/></manifest>|' android/app/src/main/AndroidManifest.xml
+
+          # Update App Name
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          app_name = "Al-Quran Terjemahan"
+          strings_path = Path("android/app/src/main/res/values/strings.xml")
+          if strings_path.exists():
+              text = strings_path.read_text()
+              if "app_name" in text:
+                  text = re.sub(r'(<string name="app_name">)(.*?)(</string>)', rf"\\1{app_name}\\3", text)
+              else:
+                  text = text.replace("</resources>", f'  <string name="app_name">{app_name}</string>\\n</resources>')
+              strings_path.write_text(text)
+          manifest_path = Path("android/app/src/main/AndroidManifest.xml")
+          if manifest_path.exists():
+              text = manifest_path.read_text()
+              text = re.sub(r'android:label=\"[^\"]*\"', 'android:label=\"@string/app_name\"', text)
+              manifest_path.write_text(text)
+          PY
           
           # Inject Gradle Config (Support Groovy and Kotlin DSL)
           if [ -f "android/app/build.gradle" ]; then
@@ -90,6 +118,9 @@ jobs:
             exit 1
           fi
 
+      - name: Generate App Icons
+        run: flutter pub run flutter_launcher_icons
+
       - name: Analyze
         run: flutter analyze
 
@@ -102,10 +133,16 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p build/out
-          cp build/app/outputs/flutter-apk/app-release.apk build/out/Al-Quran-Terjemahan-v1.0.0.apk
+          cp "build/app/outputs/flutter-apk/app-release.apk" "build/out/${APK_NAME}"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Al-Quran-Terjemahan-v1.0.0
-          path: build/out/Al-Quran-Terjemahan-v1.0.0.apk
+          name: ${{ env.APK_NAME }}
+          path: build/out/${{ env.APK_NAME }}
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ env.APP_NAME }} ${{ env.VERSION }}
+          files: build/out/${{ env.APK_NAME }}

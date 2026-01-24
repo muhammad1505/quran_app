@@ -1815,7 +1815,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
               Icon(Icons.auto_awesome, size: 16, color: theme.primaryColor),
               const SizedBox(width: 6),
               Text(
-                "Al-Qur'an Lengkap",
+                "Al-Quran Terjemahan",
                 style: theme.textTheme.labelMedium,
               ),
             ],

@@ -16,7 +16,7 @@ class OnboardingWelcomePage extends StatelessWidget {
             children: [
               const Spacer(),
               Text(
-                'Al-Qur\'an Lengkap',
+                'Al-Quran Terjemahan',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),

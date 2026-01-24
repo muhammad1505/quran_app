@@ -80,7 +80,7 @@ class MorePage extends StatelessWidget {
             onTap: () {
               showAboutDialog(
                 context: context,
-                applicationName: 'Al-Qur\'an Lengkap',
+                applicationName: 'Al-Quran Terjemahan',
                 applicationVersion: 'v1.0.0',
                 applicationLegalese: '© 2026 Quran App',
               );
