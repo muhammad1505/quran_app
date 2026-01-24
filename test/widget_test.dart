@@ -74,6 +74,37 @@ void main() {
       },
     );
 
+    // Mock Flutter TTS
+    const MethodChannel ttsChannel = MethodChannel('flutter_tts');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      ttsChannel,
+      (MethodCall methodCall) async {
+        switch (methodCall.method) {
+          case 'getVoices':
+            return [];
+          case 'setLanguage':
+          case 'setSpeechRate':
+          case 'setPitch':
+          case 'awaitSpeakCompletion':
+          case 'speak':
+          case 'stop':
+            return 1;
+          default:
+            return null;
+        }
+      },
+    );
+
+    // Mock Share Plus
+    const MethodChannel shareChannel =
+        MethodChannel('dev.fluttercommunity.plus/share');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      shareChannel,
+      (MethodCall methodCall) async {
+        return null;
+      },
+    );
+
     // Build our app and trigger a frame.
     await tester.pumpWidget(const QuranApp());
 
@@ -87,5 +118,9 @@ void main() {
 
     // Verify that we are now at DashboardScreen
     expect(find.byType(DashboardScreen), findsOneWidget);
+
+    // Dispose tree to stop periodic timers
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
   });
 }
