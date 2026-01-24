@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:quran_app/features/more/presentation/pages/articles_page.dart';
+import 'package:quran_app/features/more/presentation/pages/help_feedback_page.dart';
 import 'package:quran_app/features/more/presentation/pages/tafsir_hub_page.dart';
 import 'package:quran_app/features/offline/presentation/pages/offline_manager_page.dart';
 import 'package:quran_app/features/settings/presentation/pages/settings_page.dart';
@@ -70,7 +71,12 @@ class MorePage extends StatelessWidget {
             icon: Icons.support_agent,
             title: 'Bantuan & Feedback',
             subtitle: 'Laporkan bug atau saran',
-            onTap: () => _comingSoon(context),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HelpFeedbackPage()),
+              );
+            },
           ),
           _buildTile(
             context,
@@ -110,9 +116,4 @@ class MorePage extends StatelessWidget {
     );
   }
 
-  void _comingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fitur ini akan hadir segera.')),
-    );
-  }
 }
