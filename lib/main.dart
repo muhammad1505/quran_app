@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:alfurqan/alfurqan.dart';
 import 'package:alfurqan/constant.dart';
 import 'package:share_plus/share_plus.dart';
@@ -27,8 +28,17 @@ import 'package:quran/quran.dart' as quran;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await _initFirebase();
   await PrayerNotificationService.instance.initialize();
   runApp(const QuranApp());
+}
+
+Future<void> _initFirebase() async {
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase init gagal: $e');
+  }
 }
 
 class QuranApp extends StatefulWidget {

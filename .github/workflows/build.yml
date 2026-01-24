@@ -48,6 +48,16 @@ jobs:
             <string name="app_name">Al-Quran Terjemahan</string>
           </resources>
           XML
+          
+          # Firebase config (optional)
+          if [ -f "firebase/google-services.json" ]; then
+            mkdir -p android/app
+            cp firebase/google-services.json android/app/google-services.json
+          fi
+          if [ -f "firebase/GoogleService-Info.plist" ]; then
+            mkdir -p ios/Runner
+            cp firebase/GoogleService-Info.plist ios/Runner/GoogleService-Info.plist
+          fi
           python - <<'PY'
           from pathlib import Path
           import re
@@ -131,6 +141,95 @@ jobs:
             echo "Error: Neither build.gradle nor build.gradle.kts found in android/app/"
             ls -R android/app
             exit 1
+          fi
+
+          # Google Services plugin (only if config exists)
+          if [ -f "android/app/google-services.json" ]; then
+            if [ -f "android/build.gradle" ]; then
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("android/build.gradle")
+          text = path.read_text()
+          if "com.google.gms:google-services" not in text:
+              if "dependencies {" in text:
+                  text = text.replace(
+                      "dependencies {",
+                      "dependencies {\n        classpath 'com.google.gms:google-services:4.4.1'",
+                      1,
+                  )
+              else:
+                  text += (
+                      "\n\nbuildscript {\n"
+                      "    dependencies {\n"
+                      "        classpath 'com.google.gms:google-services:4.4.1'\n"
+                      "    }\n"
+                      "}\n"
+                  )
+          path.write_text(text)
+          PY
+            fi
+            if [ -f "android/app/build.gradle" ]; then
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("android/app/build.gradle")
+          text = path.read_text()
+          if "com.google.gms.google-services" not in text:
+              if "apply plugin: 'com.android.application'" in text:
+                  text = text.replace(
+                      "apply plugin: 'com.android.application'",
+                      "apply plugin: 'com.android.application'\napply plugin: 'com.google.gms.google-services'",
+                      1,
+                  )
+              else:
+                  text += "\napply plugin: 'com.google.gms.google-services'\n"
+          path.write_text(text)
+          PY
+            fi
+            if [ -f "android/build.gradle.kts" ]; then
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("android/build.gradle.kts")
+          text = path.read_text()
+          if "com.google.gms:google-services" not in text:
+              if "dependencies {" in text:
+                  text = text.replace(
+                      "dependencies {",
+                      "dependencies {\n        classpath(\"com.google.gms:google-services:4.4.1\")",
+                      1,
+                  )
+              else:
+                  text += (
+                      "\n\nbuildscript {\n"
+                      "    dependencies {\n"
+                      "        classpath(\"com.google.gms:google-services:4.4.1\")\n"
+                      "    }\n"
+                      "}\n"
+                  )
+          path.write_text(text)
+          PY
+            fi
+            if [ -f "android/app/build.gradle.kts" ]; then
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("android/app/build.gradle.kts")
+          text = path.read_text()
+          if "com.google.gms.google-services" not in text:
+              if "plugins {" in text:
+                  text = text.replace(
+                      "plugins {",
+                      "plugins {\n    id(\"com.google.gms.google-services\")",
+                      1,
+                  )
+              else:
+                  text = (
+                      "plugins {\n"
+                      "    id(\"com.google.gms.google-services\")\n"
+                      "}\n"
+                      + text
+                  )
+          path.write_text(text)
+          PY
+            fi
           fi
 
       - name: Prepare Adzan Audio

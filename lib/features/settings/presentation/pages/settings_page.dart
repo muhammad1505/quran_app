@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:adhan/adhan.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +11,8 @@ import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/settings/prayer_settings.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 import 'package:quran_app/core/settings/theme_settings.dart';
+import 'package:quran_app/core/services/auth_service.dart';
+import 'package:quran_app/core/services/backup_service.dart';
 import 'package:quran_app/features/offline/presentation/pages/offline_manager_page.dart';
 import 'package:quran_app/features/quran/presentation/pages/murotal_download_page.dart';
 import 'package:quran_app/core/services/prayer_notification_service.dart';
@@ -25,6 +28,8 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _enableNotifications = true;
   bool _manualLocationEnabled = false;
   String? _manualLocationName;
+  bool _isBackupRunning = false;
+  bool _isRestoreRunning = false;
   final QuranSettingsController _quranSettings =
       QuranSettingsController.instance;
   final AudioSettingsController _audioSettings =
@@ -91,6 +96,7 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _buildAccountSection(),
           _buildSectionHeader("Umum"),
           SwitchListTile(
             title: const Text("Notifikasi Adzan"),
@@ -346,6 +352,187 @@ class _SettingsPageState extends State<SettingsPage> {
           color: Theme.of(context).primaryColor,
         ),
       ),
+    );
+  }
+
+  Widget _buildAccountSection() {
+    return StreamBuilder<User?>(
+      stream: AuthService.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        final user = snapshot.data ?? AuthService.instance.currentUser;
+        final isLoggedIn = user != null;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader('Akun & Backup'),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.account_circle_outlined),
+                title: Text(
+                  isLoggedIn
+                      ? (user.displayName ?? 'Akun Google')
+                      : 'Belum login',
+                ),
+                subtitle: Text(
+                  isLoggedIn
+                      ? (user.email ?? 'Login dengan Google')
+                      : 'Masuk untuk backup data & pengaturan',
+                ),
+                trailing: isLoggedIn
+                    ? TextButton(
+                        onPressed: _isBackupRunning || _isRestoreRunning
+                            ? null
+                            : () async {
+                                final messenger =
+                                    ScaffoldMessenger.of(context);
+                                try {
+                                  await AuthService.instance.signOut();
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Berhasil logout.'),
+                                    ),
+                                  );
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text('Logout gagal: $e'),
+                                    ),
+                                  );
+                                }
+                              },
+                        child: const Text('Keluar'),
+                      )
+                    : ElevatedButton(
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          try {
+                            await AuthService.instance.signInWithGoogle();
+                            if (!mounted) return;
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Login berhasil.'),
+                              ),
+                            );
+                          } catch (e) {
+                            if (!mounted) return;
+                            messenger.showSnackBar(
+                              SnackBar(content: Text('Login gagal: $e')),
+                            );
+                          }
+                        },
+                        child: const Text('Login Google'),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.cloud_upload_outlined),
+                title: const Text('Backup sekarang'),
+                subtitle: const Text('Simpan bookmark & pengaturan ke akun'),
+                trailing: _isBackupRunning
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : null,
+                enabled: isLoggedIn && !_isBackupRunning && !_isRestoreRunning,
+                onTap: !isLoggedIn || _isBackupRunning || _isRestoreRunning
+                    ? null
+                    : () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        setState(() => _isBackupRunning = true);
+                        try {
+                          await BackupService.instance.backupNow();
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            const SnackBar(content: Text('Backup berhasil.')),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(content: Text('Backup gagal: $e')),
+                          );
+                        } finally {
+                          if (mounted) {
+                            setState(() => _isBackupRunning = false);
+                          }
+                        }
+                      },
+              ),
+            ),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.cloud_download_outlined),
+                title: const Text('Pulihkan backup'),
+                subtitle: const Text('Ambil data terakhir dari cloud'),
+                trailing: _isRestoreRunning
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : null,
+                enabled: isLoggedIn && !_isBackupRunning && !_isRestoreRunning,
+                onTap: !isLoggedIn || _isBackupRunning || _isRestoreRunning
+                    ? null
+                    : () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Pulihkan Backup'),
+                            content: const Text(
+                              'Data lokal akan diganti dengan data dari cloud. Lanjutkan?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text('Batal'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: const Text('Pulihkan'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed != true) return;
+                        setState(() => _isRestoreRunning = true);
+                        try {
+                          final restored =
+                              await BackupService.instance.restoreLatest();
+                          if (!mounted) return;
+                          await _loadSettings();
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                restored
+                                    ? 'Restore berhasil.'
+                                    : 'Belum ada data backup.',
+                              ),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(content: Text('Restore gagal: $e')),
+                          );
+                        } finally {
+                          if (mounted) {
+                            setState(() => _isRestoreRunning = false);
+                          }
+                        }
+                      },
+              ),
+            ),
+            const Divider(),
+          ],
+        );
+      },
     );
   }
 
