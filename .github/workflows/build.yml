@@ -36,6 +36,24 @@ jobs:
       - name: Scaffold Platform Support
         run: flutter create .
 
+      - name: Prepare Android Signing
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/keystore.jks
+          cat > android/key.properties <<EOF
+          storeFile=keystore.jks
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          EOF
+
+      - name: Print Release SHA1
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          keytool -list -v -keystore android/keystore.jks \
+            -alias "${{ secrets.ANDROID_KEY_ALIAS }}" -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            | grep SHA1
+
       - name: Inject Android Configuration
         run: |
           # Inject Permissions
@@ -86,27 +104,33 @@ jobs:
             sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle
           python - <<'PY'
           from pathlib import Path
+          import re
           path = Path("android/app/build.gradle")
           text = path.read_text()
-          if "coreLibraryDesugaringEnabled" not in text:
-              text = text.replace(
-                  "compileOptions {",
-                  "compileOptions {\n        coreLibraryDesugaringEnabled true",
-                  1,
+          if "keystoreProperties" not in text:
+              snippet = (
+                  "def keystoreProperties = new Properties()\n"
+                  "def keystorePropertiesFile = rootProject.file('key.properties')\n"
+                  "if (keystorePropertiesFile.exists()) {\n"
+                  "    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n"
+                  "}\n"
+                  "def hasKeystore = keystorePropertiesFile.exists()\n\n"
               )
+              if "android {" in text:
+                  text = text.replace("android {", snippet + "android {", 1)
+              else:
+                  text = snippet + text
+          if "coreLibraryDesugaringEnabled" not in text:
+              text = text.replace("compileOptions {", "compileOptions {\n        coreLibraryDesugaringEnabled true", 1)
+          if "signingConfigs" not in text:
+              text = text.replace("android {", "android {\n    signingConfigs {\n        release {\n            if (hasKeystore) {\n                keyAlias keystoreProperties['keyAlias']\n                keyPassword keystoreProperties['keyPassword']\n                storeFile file(keystoreProperties['storeFile'])\n                storePassword keystoreProperties['storePassword']\n            }\n        }\n    }", 1)
+          if "signingConfig signingConfigs.release" not in text:
+              text = text.replace("signingConfig signingConfigs.debug", "if (hasKeystore) {\n                signingConfig signingConfigs.release\n            } else {\n                signingConfig signingConfigs.debug\n            }", 1)
           if "desugar_jdk_libs" not in text:
               if "dependencies {" in text:
-                  text = text.replace(
-                      "dependencies {",
-                      "dependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'",
-                      1,
-                  )
+                  text = text.replace("dependencies {", "dependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'", 1)
               else:
-                  text += (
-                      "\n\ndependencies {\n"
-                      "    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'\n"
-                      "}\n"
-                  )
+                  text += ("\n\ndependencies {\n" "    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'\n" "}\n")
           path.write_text(text)
           PY
           elif [ -f "android/app/build.gradle.kts" ]; then
@@ -114,27 +138,35 @@ jobs:
             sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/' android/app/build.gradle.kts
           python - <<'PY'
           from pathlib import Path
+          import re
           path = Path("android/app/build.gradle.kts")
           text = path.read_text()
-          if "isCoreLibraryDesugaringEnabled" not in text:
-              text = text.replace(
-                  "compileOptions {",
-                  "compileOptions {\n        isCoreLibraryDesugaringEnabled = true",
-                  1,
+          if "keystoreProperties" not in text:
+              snippet = (
+                  "import java.util.Properties\n"
+                  "import java.io.FileInputStream\n\n"
+                  "val keystoreProperties = Properties()\n"
+                  "val keystorePropertiesFile = rootProject.file(\"key.properties\")\n"
+                  "if (keystorePropertiesFile.exists()) {\n"
+                  "    keystoreProperties.load(FileInputStream(keystorePropertiesFile))\n"
+                  "}\n"
+                  "val hasKeystore = keystorePropertiesFile.exists()\n\n"
               )
+              if "android {" in text:
+                  text = text.replace("android {", snippet + "android {", 1)
+              else:
+                  text = snippet + text
+          if "isCoreLibraryDesugaringEnabled" not in text:
+              text = text.replace("compileOptions {", "compileOptions {\n        isCoreLibraryDesugaringEnabled = true", 1)
+          if "signingConfigs" not in text:
+              text = text.replace("android {", "android {\n    signingConfigs {\n        create(\"release\") {\n            if (hasKeystore) {\n                keyAlias = keystoreProperties[\"keyAlias\"] as String\n                keyPassword = keystoreProperties[\"keyPassword\"] as String\n                storeFile = file(keystoreProperties[\"storeFile\"] as String)\n                storePassword = keystoreProperties[\"storePassword\"] as String\n            }\n        }\n    }", 1)
+          if "signingConfig = signingConfigs.getByName(\"release\")" not in text:
+              text = text.replace("signingConfig = signingConfigs.getByName(\"debug\")", "signingConfig = if (hasKeystore) signingConfigs.getByName(\"release\") else signingConfigs.getByName(\"debug\")", 1)
           if "desugar_jdk_libs" not in text:
               if "dependencies {" in text:
-                  text = text.replace(
-                      "dependencies {",
-                      "dependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")",
-                      1,
-                  )
+                  text = text.replace("dependencies {", "dependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")", 1)
               else:
-                  text += (
-                      "\n\ndependencies {\n"
-                      "    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")\n"
-                      "}\n"
-                  )
+                  text += ("\n\ndependencies {\n" "    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")\n" "}\n")
           path.write_text(text)
           PY
           else

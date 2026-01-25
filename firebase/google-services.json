@@ -12,7 +12,12 @@
           "package_name": "com.example.quran_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "543968355606-m419014c7u96nt8atu2dkrpqe05d4a3r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBQB7mSzf6-0wzqMV6h9N2Uuq1glkgK43s"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "543968355606-m419014c7u96nt8atu2dkrpqe05d4a3r.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
