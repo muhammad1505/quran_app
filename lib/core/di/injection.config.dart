@@ -11,10 +11,12 @@
 import 'package:get_it/get_it.dart' as _i1;
 import 'package:injectable/injectable.dart' as _i2;
 
-import '../settings/quran_settings.dart' as _i5;
-import '../settings/theme_settings.dart' as _i6;
+import '../../features/quran/presentation/bloc/audio/quran_audio_cubit.dart'
+    as _i7;
 import '../services/audio_cache_service.dart' as _i3;
 import '../services/prayer_notification_service.dart' as _i4;
+import '../settings/quran_settings.dart' as _i5;
+import '../settings/theme_settings.dart' as _i6;
 
 extension GetItInjectableX on _i1.GetIt {
 // initializes the registration of main-scope dependencies inside of GetIt
@@ -34,6 +36,8 @@ extension GetItInjectableX on _i1.GetIt {
         () => _i5.QuranSettingsController());
     gh.lazySingleton<_i6.ThemeSettingsController>(
         () => _i6.ThemeSettingsController());
+    gh.factory<_i7.QuranAudioCubit>(
+        () => _i7.QuranAudioCubit(gh<_i3.AudioCacheService>()));
     return this;
   }
 }
