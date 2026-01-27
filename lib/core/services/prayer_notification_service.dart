@@ -22,9 +22,8 @@ class PrayerNotificationService {
     try {
       tz.initializeTimeZones();
       final timezoneInfo = await FlutterTimezone.getLocalTimezone();
-      // Fix: timezoneInfo is an object, we need its identifier string
-      tz.setLocalLocation(tz.getLocation(timezoneInfo.identifier)); 
-      debugPrint('Timezone initialized: ${timezoneInfo.identifier}');
+      tz.setLocalLocation(tz.getLocation(timezoneInfo));
+      debugPrint('Timezone initialized: $timezoneInfo');
     } catch (e) {
       debugPrint('Timezone init failed: $e');
       try {

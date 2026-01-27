@@ -1887,43 +1887,44 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   }) async {
     final messenger = ScaffoldMessenger.maybeOf(context);
     try {
-      // Tunggu dialog merender konten sepenuhnya
-      await Future.delayed(const Duration(milliseconds: 150));
-      
-      RenderRepaintBoundary? boundary = boundaryKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      // Tunggu dialog merender konten sepenuhnya (wait for dialog animation)
+      await Future.delayed(const Duration(milliseconds: 350));
+      if (!mounted) return;
 
-      if (boundary == null) {
-        // Coba tunggu sedikit lagi jika belum siap
-        await Future.delayed(const Duration(milliseconds: 100));
-        if (context.mounted) {
-           boundary = boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-        }
+      // Ensure frame is drawn
+      await WidgetsBinding.instance.endOfFrame;
+
+      final contextObject = boundaryKey.currentContext;
+      if (contextObject == null) {
+        throw Exception('Gagal menangkap gambar: Context null.');
       }
 
+      RenderRepaintBoundary? boundary =
+          contextObject.findRenderObject() as RenderRepaintBoundary?;
+
       if (boundary == null) {
-        throw Exception('Gagal menangkap gambar (RenderObject null).');
+        throw Exception('Gagal menangkap gambar: RenderObject null.');
       }
 
       if (boundary.debugNeedsPaint) {
         await Future.delayed(const Duration(milliseconds: 50));
+        if (!mounted) return;
+        await WidgetsBinding.instance.endOfFrame;
       }
 
-      if (!mounted) return;
       final pixelRatio = MediaQuery.of(context).devicePixelRatio;
       final image = await boundary.toImage(pixelRatio: pixelRatio);
-      final byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
-      
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
       if (byteData == null) {
         throw Exception('Gagal mengonversi gambar.');
       }
-      
+
       final pngBytes = byteData.buffer.asUint8List();
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/$fileName');
       await file.writeAsBytes(pngBytes);
-      
+
       try {
         await Share.shareXFiles(
           [XFile(file.path)],
@@ -1931,10 +1932,11 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
         );
       } catch (e) {
         // Abaikan error spesifik share sheet yang sering terjadi tapi tidak fatal
-         if (e.toString().contains('LateInitializationError') || e.toString().contains('localResult')) {
-           return;
-         }
-         rethrow;
+        if (e.toString().contains('LateInitializationError') ||
+            e.toString().contains('localResult')) {
+          return;
+        }
+        rethrow;
       }
     } catch (e) {
       if (!mounted) return;

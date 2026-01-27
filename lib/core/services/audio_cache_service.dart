@@ -67,16 +67,31 @@ class AudioCacheService {
     }
     final url = surahUrl(surahNumber, qariId);
     final client = HttpClient();
-    final request = await client.getUrl(Uri.parse(url));
-    final response = await request.close();
-    if (response.statusCode != 200) {
-      throw HttpException('Gagal mengunduh audio', uri: Uri.parse(url));
+    try {
+      final request = await client.getUrl(Uri.parse(url));
+      final response = await request.close();
+      if (response.statusCode != 200) {
+        throw HttpException('Gagal mengunduh audio: ${response.statusCode}', uri: Uri.parse(url));
+      }
+      await file.parent.create(recursive: true);
+      final sink = file.openWrite();
+      try {
+        await response.pipe(sink);
+      } catch (e) {
+        await sink.close();
+        if (file.existsSync()) {
+          await file.delete();
+        }
+        rethrow;
+      }
+      await sink.close();
+      return file;
+    } catch (e) {
+      if (file.existsSync()) {
+        await file.delete();
+      }
+      rethrow;
     }
-    await file.parent.create(recursive: true);
-    final sink = file.openWrite();
-    await response.pipe(sink);
-    await sink.close();
-    return file;
   }
 
   Future<void> deleteSurah(int surahNumber, String qariId) async {
@@ -92,10 +107,10 @@ class AudioCacheService {
       return {};
     }
     final results = <int>{};
-    for (final entity in dir.listSync()) {
+    await for (final entity in dir.list()) {
       if (entity is File && entity.path.endsWith('.mp3')) {
         final name = entity.uri.pathSegments.last;
-        final match = RegExp(r'surah_(\\d{3})\\.mp3').firstMatch(name);
+        final match = RegExp(r'surah_(\d{3})\.mp3').firstMatch(name);
         if (match != null) {
           final number = int.tryParse(match.group(1) ?? '');
           if (number != null) {
