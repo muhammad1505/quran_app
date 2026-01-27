@@ -37,7 +37,7 @@ jobs:
         run: flutter create .
 
       - name: Prepare Android Signing
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: secrets.ANDROID_KEYSTORE_BASE64 != ''
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/keystore.jks
           cat > android/key.properties <<EOF
@@ -48,7 +48,7 @@ jobs:
           EOF
 
       - name: Print Release SHA1
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: secrets.ANDROID_KEYSTORE_BASE64 != ''
         run: |
           keytool -list -v -keystore android/keystore.jks \
             -alias "${{ secrets.ANDROID_KEY_ALIAS }}" -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
