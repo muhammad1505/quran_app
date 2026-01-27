@@ -97,8 +97,7 @@ jobs:
                       "def keystorePropertiesFile = rootProject.file('key.properties')\n"
                       "if (keystorePropertiesFile.exists()) {\n"
                       "    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n"
-                      "}
-"
+                      "}\n"
                       "def hasKeystore = keystorePropertiesFile.exists()\n\n"
                   )
                   if "android {" in text:
