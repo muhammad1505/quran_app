@@ -3,7 +3,6 @@ import 'package:injectable/injectable.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:quran_app/core/services/audio_cache_service.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
-import 'package:quran/quran.dart' as quran;
 import 'quran_audio_state.dart';
 
 @injectable
@@ -20,7 +19,6 @@ class QuranAudioCubit extends Cubit<QuranAudioState> {
   int _currentSurah = 1;
   int? _currentAyah;
   bool _isAyahMode = false;
-  Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
 
   Future<void> playSurah(int surahNumber, {required AudioSettings settings}) async {
