@@ -19,12 +19,18 @@ class PrayerNotificationService {
 
   Future<void> initialize() async {
     if (_initialized) return;
-    tz.initializeTimeZones();
     try {
+      tz.initializeTimeZones();
       final timezoneInfo = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(timezoneInfo.identifier));
-    } catch (_) {
-      tz.setLocalLocation(tz.getLocation('UTC'));
+      tz.setLocalLocation(tz.getLocation(timezoneInfo));
+      debugPrint('Timezone initialized: $timezoneInfo');
+    } catch (e) {
+      debugPrint('Timezone init failed: $e');
+      try {
+        tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+      } catch (_) {
+        tz.setLocalLocation(tz.getLocation('UTC'));
+      }
     }
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -34,12 +40,20 @@ class PrayerNotificationService {
       requestSoundPermission: false,
     );
     const settings = InitializationSettings(android: android, iOS: ios);
-    await _notifications.initialize(settings);
+    
+    await _notifications.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (details) {
+        debugPrint('Notification clicked: ${details.payload}');
+      },
+    );
     _initialized = true;
   }
 
   Future<bool> requestPermissions() async {
-    return _ensureNotificationPermission();
+    final notification = await _ensureNotificationPermission();
+    final alarm = await _ensureAlarmPermission();
+    return notification && alarm;
   }
 
   Future<bool> _ensureNotificationPermission() async {
@@ -48,6 +62,22 @@ class PrayerNotificationService {
     if (status.isGranted) return true;
     final result = await Permission.notification.request();
     return result.isGranted;
+  }
+
+  Future<bool> _ensureAlarmPermission() async {
+    if (kIsWeb) return true;
+    // Android 12+ (API 31+) requires SCHEDULE_EXACT_ALARM
+    final status = await Permission.scheduleExactAlarm.status;
+    if (status.isGranted) return true;
+    // status is usually 'denied' or 'permanentlyDenied' or 'restricted'
+    // but on older Android versions it might be 'granted' by default or not applicable.
+    // However, permission_handler might return 'denied' if the permission is not in manifest.
+    // We try to request it if possible, but for exact alarm, user often needs to go to settings.
+    if (await Permission.scheduleExactAlarm.isDenied) {
+        final result = await Permission.scheduleExactAlarm.request();
+        return result.isGranted;
+    }
+    return true; 
   }
 
   Future<bool> _scheduleZonedWithFallback({

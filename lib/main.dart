@@ -357,6 +357,10 @@ class _HomePageState extends State<HomePage> {
   String _sanitizeTranslation(String input) {
     return input
         .replaceAll(RegExp(r'<[^>]*>'), '')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&apos;', "'")
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&#39;', "'")
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
   }

@@ -1887,39 +1887,53 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   }) async {
     final messenger = ScaffoldMessenger.maybeOf(context);
     try {
-      final pixelRatio = MediaQuery.of(context).devicePixelRatio;
-      await Future.delayed(const Duration(milliseconds: 50));
-      await WidgetsBinding.instance.endOfFrame;
-      final boundary = boundaryKey.currentContext?.findRenderObject()
+      // Tunggu dialog merender konten sepenuhnya
+      await Future.delayed(const Duration(milliseconds: 150));
+      
+      RenderRepaintBoundary? boundary = boundaryKey.currentContext?.findRenderObject()
           as RenderRepaintBoundary?;
+
       if (boundary == null) {
-        throw Exception('Gagal menangkap gambar.');
+        // Coba tunggu sedikit lagi jika belum siap
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (context.mounted) {
+           boundary = boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+        }
       }
+
+      if (boundary == null) {
+        throw Exception('Gagal menangkap gambar (RenderObject null).');
+      }
+
       if (boundary.debugNeedsPaint) {
-        await Future.delayed(const Duration(milliseconds: 20));
-        await WidgetsBinding.instance.endOfFrame;
+        await Future.delayed(const Duration(milliseconds: 50));
       }
+
+      final pixelRatio = MediaQuery.of(context).devicePixelRatio;
       final image = await boundary.toImage(pixelRatio: pixelRatio);
       final byteData =
           await image.toByteData(format: ui.ImageByteFormat.png);
+      
       if (byteData == null) {
         throw Exception('Gagal mengonversi gambar.');
       }
+      
       final pngBytes = byteData.buffer.asUint8List();
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/$fileName');
       await file.writeAsBytes(pngBytes);
+      
       try {
         await Share.shareXFiles(
           [XFile(file.path)],
           text: subject,
         );
-      } on Error catch (e) {
-        if (e.runtimeType.toString() != 'LateInitializationError' ||
-            !e.toString().contains('localResult')) {
-          rethrow;
-        }
-        // Some devices throw this even though the share sheet opens.
+      } catch (e) {
+        // Abaikan error spesifik share sheet yang sering terjadi tapi tidak fatal
+         if (e.toString().contains('LateInitializationError') || e.toString().contains('localResult')) {
+           return;
+         }
+         rethrow;
       }
     } catch (e) {
       if (!mounted) return;
