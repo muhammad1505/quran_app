@@ -48,6 +48,15 @@ jobs:
         run: flutter test
 
       # 3. Prepare Android Environment
+      - name: Configure Gradle Properties
+        run: |
+          mkdir -p android
+          echo "org.gradle.jvmargs=-Xmx4g -XX:+HeapDumpOnOutOfMemoryError" > android/gradle.properties
+          echo "org.gradle.daemon=false" >> android/gradle.properties
+          echo "org.gradle.parallel=true" >> android/gradle.properties
+          echo "android.useAndroidX=true" >> android/gradle.properties
+          echo "android.enableJetifier=true" >> android/gradle.properties
+
       - name: Configure Android Project (Injection)
         run: |
           # 1. Inject Permissions to AndroidManifest.xml
