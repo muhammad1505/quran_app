@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:injectable/injectable.dart';
 import 'package:path_provider/path_provider.dart';
 
 class AudioQari {
@@ -14,11 +15,8 @@ class AudioQari {
   });
 }
 
+@lazySingleton
 class AudioCacheService {
-  AudioCacheService._();
-
-  static final AudioCacheService instance = AudioCacheService._();
-
   static const List<AudioQari> qaris = [
     AudioQari(
       id: 'alafasy',

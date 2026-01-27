@@ -25,11 +25,13 @@ import 'core/services/translation_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'features/onboarding/presentation/pages/onboarding_welcome_page.dart';
 import 'package:quran/quran.dart' as quran;
+import 'package:quran_app/core/di/injection.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await configureDependencies();
   await _initFirebase();
-  await PrayerNotificationService.instance.initialize();
+  await getIt<PrayerNotificationService>().initialize();
   runApp(const QuranApp());
 }
 

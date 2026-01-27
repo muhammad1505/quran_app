@@ -2,17 +2,14 @@ import 'package:adhan/adhan.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:injectable/injectable.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:quran_app/core/settings/prayer_settings.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+@lazySingleton
 class PrayerNotificationService {
-  PrayerNotificationService._();
-
-  static final PrayerNotificationService instance =
-      PrayerNotificationService._();
-
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
