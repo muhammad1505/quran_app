@@ -179,8 +179,8 @@ class MockHttpClientResponse extends Fake implements HttpClientResponse {
       HttpClientResponseCompressionState.notCompressed;
 
   @override
-  Stream<List<int>> map<S>(S Function(List<int> event) convert) {
-    return const Stream.empty();
+  Stream<S> map<S>(S Function(List<int> event) convert) {
+    return Stream<S>.empty();
   }
 
   @override
