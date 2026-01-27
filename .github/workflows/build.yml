@@ -45,17 +45,6 @@ jobs:
         run: flutter test
 
       # 3. Prepare Android Environment
-      - name: Decode Keystore
-        if: secrets.ANDROID_KEYSTORE_BASE64 != ''
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/keystore.jks
-          cat > android/key.properties <<EOF
-          storeFile=keystore.jks
-          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          EOF
-
       - name: Configure Android Project (Injection)
         run: |
           # 1. Inject Permissions to AndroidManifest.xml
@@ -77,7 +66,7 @@ jobs:
             echo "Warning: google-services.json not found."
           fi
 
-          # 4. Inject Gradle Configurations (Signing, Firebase Plugin, Desugaring)
+          # 4. Inject Gradle Configurations (Firebase Plugin, Desugaring)
           python - <<'PY'
           import os
           from pathlib import Path
@@ -89,45 +78,6 @@ jobs:
                   return
 
               text = gradle_path.read_text()
-              
-              # Inject Keystore Config
-              if "keystoreProperties" not in text:
-                  keystore_snippet = (
-                      "def keystoreProperties = new Properties()\n"
-                      "def keystorePropertiesFile = rootProject.file('key.properties')\n"
-                      "if (keystorePropertiesFile.exists()) {\n"
-                      "    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n"
-                      "}\n"
-                      "def hasKeystore = keystorePropertiesFile.exists()\n\n"
-                  )
-                  if "android {" in text:
-                      text = text.replace("android {", keystore_snippet + "android {", 1)
-                  else:
-                      text = keystore_snippet + text
-
-              # Inject Signing Configs
-              if "signingConfigs" not in text:
-                  signing_snippet = (
-                      "    signingConfigs {\n"
-                      "        release {\n"
-                      "            if (hasKeystore) {\n"
-                      "                keyAlias keystoreProperties['keyAlias']\n"
-                      "                keyPassword keystoreProperties['keyPassword']\n"
-                      "                storeFile file(keystoreProperties['storeFile'])\n"
-                      "                storePassword keystoreProperties['storePassword']\n"
-                      "            }\n"
-                      "        }\n"
-                      "    }\n"
-                  )
-                  text = text.replace("android {", "android {\n" + signing_snippet, 1)
-
-              # Apply Signing Config to Release
-              if "signingConfig signingConfigs.release" not in text:
-                  text = text.replace(
-                      "signingConfig signingConfigs.debug",
-                      "if (hasKeystore) {\n                signingConfig signingConfigs.release\n            } else {\n                signingConfig signingConfigs.debug\n            }",
-                      1
-                  )
 
               # Enable Core Library Desugaring (Java 8+ features)
               if "coreLibraryDesugaringEnabled" not in text:
