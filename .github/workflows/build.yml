@@ -102,7 +102,7 @@ jobs:
           if [ -f "android/app/build.gradle" ]; then
             echo "Detected Groovy DSL"
             sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle
-          python - <<'PY'
+            python - <<'PY'
           from pathlib import Path
           import re
           path = Path("android/app/build.gradle")
@@ -136,7 +136,7 @@ jobs:
           elif [ -f "android/app/build.gradle.kts" ]; then
             echo "Detected Kotlin DSL"
             sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/' android/app/build.gradle.kts
-          python - <<'PY'
+            python - <<'PY'
           from pathlib import Path
           import re
           path = Path("android/app/build.gradle.kts")
@@ -178,7 +178,7 @@ jobs:
           # Google Services plugin (only if config exists)
           if [ -f "android/app/google-services.json" ]; then
             if [ -f "android/build.gradle" ]; then
-          python - <<'PY'
+              python - <<'PY'
           from pathlib import Path
           import re
           path = Path("android/build.gradle")
@@ -237,7 +237,7 @@ jobs:
           PY
             fi
             if [ -f "android/app/build.gradle" ]; then
-          python - <<'PY'
+              python - <<'PY'
           from pathlib import Path
           path = Path("android/app/build.gradle")
           text = path.read_text()
@@ -254,7 +254,7 @@ jobs:
           PY
             fi
             if [ -f "android/build.gradle.kts" ]; then
-          python - <<'PY'
+              python - <<'PY'
           from pathlib import Path
           import re
           path = Path("android/build.gradle.kts")
@@ -312,7 +312,7 @@ jobs:
           PY
             fi
             if [ -f "android/app/build.gradle.kts" ]; then
-          python - <<'PY'
+              python - <<'PY'
           from pathlib import Path
           path = Path("android/app/build.gradle.kts")
           text = path.read_text()
