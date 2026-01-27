@@ -61,15 +61,24 @@ jobs:
           </resources>
           XML
 
-          # 3. Handle Firebase Config (if exists in repo or secrets could be added here)
+          # 3. Handle Firebase Config
           if [ -f "firebase/google-services.json" ]; then
             cp firebase/google-services.json android/app/google-services.json
             echo "Google Services JSON copied."
+            export HAS_FIREBASE=true
           else
-            echo "Warning: google-services.json not found."
+            echo "Warning: google-services.json not found. Build might fail if Firebase plugins are used without config."
+            export HAS_FIREBASE=false
           fi
 
-          # 4. Inject Gradle Configurations (Firebase Plugin, Desugaring)
+          # 4. Inject Gradle Configurations
+          # Force minSdkVersion to 21 (required by many plugins)
+          if [ -f "android/app/build.gradle" ]; then
+             sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle
+             # Fallback for kotlin dsl or different formatting
+             sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' android/app/build.gradle
+          fi
+
           python - <<'PY'
           import os
           from pathlib import Path
@@ -82,7 +91,7 @@ jobs:
 
               text = gradle_path.read_text()
 
-              # Enable Core Library Desugaring (Java 8+ features)
+              # Enable Core Library Desugaring
               if "coreLibraryDesugaringEnabled" not in text:
                   text = text.replace("compileOptions {", "compileOptions {\n        coreLibraryDesugaringEnabled true", 1)
               
@@ -93,9 +102,12 @@ jobs:
                   else:
                       text += "\ndependencies {\n" + dep_line + "\n}\n"
 
-              # Apply Google Services Plugin (for Firebase)
-              if "com.google.gms.google-services" not in text:
-                  text += "\napply plugin: 'com.google.gms.google-services'\n"
+              # Apply Google Services Plugin ONLY if file exists (checked via env var or file presence logic handled before)
+              # But since we are inside python, let's check file existence again or assume true if env var passed?
+              # Let's check for the json file location.
+              if Path("android/app/google-services.json").exists():
+                  if "com.google.gms.google-services" not in text:
+                      text += "\napply plugin: 'com.google.gms.google-services'\n"
 
               gradle_path.write_text(text)
               print("android/app/build.gradle injected successfully.")
@@ -105,17 +117,17 @@ jobs:
               if not root_gradle.exists():
                   return
               
+              if not Path("android/app/google-services.json").exists():
+                  return
+
               text = root_gradle.read_text()
               if "com.google.gms:google-services" not in text:
-                  # Add classpath dependency
                   if "dependencies {" in text:
                       text = text.replace(
                           "dependencies {", 
                           "dependencies {\n        classpath 'com.google.gms:google-services:4.4.1'", 
                           1
                       )
-                  else:
-                      print("Warning: Could not find dependencies block in root build.gradle")
               
               root_gradle.write_text(text)
               print("android/build.gradle injected successfully.")
@@ -133,7 +145,7 @@ jobs:
 
       # 4. Build
       - name: Build Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --verbose
 
       - name: Verify Artifact
         run: |
