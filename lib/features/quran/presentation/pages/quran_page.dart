@@ -1909,6 +1909,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
         await Future.delayed(const Duration(milliseconds: 50));
       }
 
+      if (!mounted) return;
       final pixelRatio = MediaQuery.of(context).devicePixelRatio;
       final image = await boundary.toImage(pixelRatio: pixelRatio);
       final byteData =
