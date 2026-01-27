@@ -21,7 +21,11 @@ import 'package:quran_app/core/di/injection.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
-// ... (rest)
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
 class _SettingsPageState extends State<SettingsPage> {
   bool _enableNotifications = true;
   bool _manualLocationEnabled = false;
