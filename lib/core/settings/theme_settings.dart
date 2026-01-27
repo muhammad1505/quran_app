@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum AppThemeMode { light, dark, sepia }
@@ -13,12 +14,11 @@ class ThemeSettings {
   }
 }
 
+@lazySingleton
 class ThemeSettingsController extends ChangeNotifier {
   static const _themeKey = 'app_theme_mode';
 
-  ThemeSettingsController._();
-
-  static final ThemeSettingsController instance = ThemeSettingsController._();
+  ThemeSettingsController();
 
   ThemeSettings _value = const ThemeSettings();
   ThemeSettings get value => _value;

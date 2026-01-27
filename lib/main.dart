@@ -32,6 +32,8 @@ Future<void> main() async {
   await configureDependencies();
   await _initFirebase();
   await getIt<PrayerNotificationService>().initialize();
+  await getIt<ThemeSettingsController>().load();
+  await getIt<QuranSettingsController>().load();
   runApp(const QuranApp());
 }
 
@@ -51,13 +53,12 @@ class QuranApp extends StatefulWidget {
 }
 
 class _QuranAppState extends State<QuranApp> {
-  final ThemeSettingsController _themeSettings =
-      ThemeSettingsController.instance;
+  final ThemeSettingsController _themeSettings = getIt<ThemeSettingsController>();
 
   @override
   void initState() {
     super.initState();
-    _themeSettings.load();
+    // Loaded in main()
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 import 'package:quran_app/core/settings/theme_settings.dart';
 
@@ -7,10 +8,8 @@ class QuranDisplaySettingsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Access Singletons directly for now to match existing pattern, 
-    // though passing them would be cleaner.
-    final quranSettings = QuranSettingsController.instance;
-    final themeSettings = ThemeSettingsController.instance;
+    final quranSettings = getIt<QuranSettingsController>();
+    final themeSettings = getIt<ThemeSettingsController>();
 
     return AnimatedBuilder(
       animation: Listenable.merge([quranSettings, themeSettings]),

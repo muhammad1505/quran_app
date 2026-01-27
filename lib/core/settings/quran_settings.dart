@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum TranslationLanguage { id, en }
@@ -127,6 +128,7 @@ class QuranSettings {
   }
 }
 
+@lazySingleton
 class QuranSettingsController extends ChangeNotifier {
   static const _translationKey = 'translation';
   static const _showLatinKey = 'show_latin';
@@ -139,9 +141,7 @@ class QuranSettingsController extends ChangeNotifier {
   static const _arabicFontKey = 'arabic_font_family';
   static const _tafsirSourceKey = 'tafsir_source';
 
-  QuranSettingsController._();
-
-  static final QuranSettingsController instance = QuranSettingsController._();
+  QuranSettingsController();
 
   QuranSettings _value = const QuranSettings();
   QuranSettings get value => _value;

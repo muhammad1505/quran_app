@@ -12,6 +12,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:quran/quran.dart' as quran;
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/audio_cache_service.dart';
 import 'package:quran_app/core/services/bookmark_service.dart';
 import 'package:quran_app/core/services/last_read_service.dart';
@@ -35,7 +36,7 @@ class QuranPage extends StatefulWidget {
 class _QuranPageState extends State<QuranPage> {
   final TextEditingController _searchController = TextEditingController();
   final QuranSettingsController _quranSettings =
-      QuranSettingsController.instance;
+      getIt<QuranSettingsController>();
   String _query = '';
   Timer? _searchDebounce;
   Set<int> _translationMatches = {};
@@ -1045,6 +1046,9 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
       },
     );
   }
+
+  // Helper getters for old usage (if any remain)
+  ThemeSettingsController get _themeSettings => getIt<ThemeSettingsController>();
 
 
   void _showReaderMoreSheet() {
