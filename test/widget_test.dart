@@ -3,13 +3,30 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quran_app/main.dart';
+import 'package:quran_app/core/di/injection.dart';
+import 'package:get_it/get_it.dart';
 
 void main() {
+  setUp(() async {
+    await GetIt.instance.reset();
+    await configureDependencies();
+  });
+
   testWidgets('App smoke test', (WidgetTester tester) async {
     // Mock SharedPreferences
     SharedPreferences.setMockInitialValues({
       'onboarding_done': true,
     });
+
+    // Mock Path Provider
+    const MethodChannel pathProviderChannel =
+        MethodChannel('plugins.flutter.io/path_provider');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      pathProviderChannel,
+      (MethodCall methodCall) async {
+        return '.';
+      },
+    );
 
     // Mock Flutter Timezone
     const MethodChannel timezoneChannel = MethodChannel('flutter_timezone');
