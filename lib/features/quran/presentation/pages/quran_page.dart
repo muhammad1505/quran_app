@@ -602,11 +602,11 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   bool _isAyahMode = false;
   int? _currentAyah;
   final QuranSettingsController _quranSettings =
-      QuranSettingsController.instance;
+      getIt<QuranSettingsController>();
   final AudioSettingsController _audioSettings =
-      AudioSettingsController.instance;
+      AudioSettingsController.instance; // Keep this until migrated
   final ThemeSettingsController _themeSettings =
-      ThemeSettingsController.instance;
+      getIt<ThemeSettingsController>();
 
   @override
   void initState() {
@@ -689,14 +689,14 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
           _isAyahMode = false;
           _currentAyah = null;
           final qariId = _audioSettings.value.qariId;
-          final localFile = await AudioCacheService.instance.getLocalSurahFile(
+          final localFile = await getIt<AudioCacheService>().getLocalSurahFile(
             widget.surahNumber,
             qariId,
           );
           if (localFile != null) {
             await _audioPlayer.setFilePath(localFile.path);
           } else {
-            final url = AudioCacheService.instance.surahUrl(
+            final url = getIt<AudioCacheService>().surahUrl(
               widget.surahNumber,
               qariId,
             );
@@ -728,7 +728,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
         _currentAyah = verseNumber;
         _highlightVerse = verseNumber;
       });
-      final qari = AudioCacheService.instance.qariById(
+      final qari = getIt<AudioCacheService>().qariById(
         _audioSettings.value.qariId,
       );
       final globalIndex = _globalAyahIndex(widget.surahNumber, verseNumber);
@@ -930,33 +930,21 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
         }
         final words = snapshot.data ?? const [];
         if (words.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Text(
-              "Terjemahan per kata belum tersedia untuk ayat ini.",
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
-          );
+          return const SizedBox.shrink();
         }
-        return Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: words
-                .map((word) => _buildWordChip(word, showLatin))
-                .toList(),
-          ),
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.end,
+          textDirection: TextDirection.rtl,
+          children: words.map((w) => _buildWordChip(w, showLatin)).toList(),
         );
       },
     );
   }
 
   Future<void> _refreshDownloadStatus() async {
-    final downloaded = await AudioCacheService.instance.isSurahDownloaded(
+    final downloaded = await getIt<AudioCacheService>().isSurahDownloaded(
       widget.surahNumber,
       _audioSettings.value.qariId,
     );
@@ -1013,12 +1001,12 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     setState(() => _isDownloading = true);
     try {
       if (_isDownloaded) {
-        await AudioCacheService.instance.deleteSurah(
+        await getIt<AudioCacheService>().deleteSurah(
           widget.surahNumber,
           _audioSettings.value.qariId,
         );
       } else {
-        await AudioCacheService.instance.downloadSurah(
+        await getIt<AudioCacheService>().downloadSurah(
           widget.surahNumber,
           _audioSettings.value.qariId,
         );
@@ -1142,28 +1130,6 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     );
   }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(label),
-              const Spacer(),
-              Text(value.toStringAsFixed(0)),
-            ],
-          ),
-          Slider(
-            value: value.clamp(min, max),
-            min: min,
-            max: max,
-            onChanged: onChanged,
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildWordChip(WordByWordItem word, bool showLatin) {
     return Container(

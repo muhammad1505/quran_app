@@ -215,7 +215,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     final prefs = await SharedPreferences.getInstance();
     final enabled = prefs.getBool('notifications') ?? true;
     if (!enabled) {
-      await PrayerNotificationService.instance.cancelAll();
+      await getIt<PrayerNotificationService>().cancelAll();
       return;
     }
     final tomorrow = PrayerTimes(
@@ -223,7 +223,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       DateComponents.from(DateTime.now().add(const Duration(days: 1))),
       params,
     );
-    await PrayerNotificationService.instance.schedulePrayerTimes(
+    await getIt<PrayerNotificationService>().schedulePrayerTimes(
       today,
       tomorrow,
       _prayerSettings.value,

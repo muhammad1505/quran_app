@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/prayer_notification_service.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/settings/prayer_settings.dart';
@@ -145,10 +146,10 @@ class BackupService {
   }
 
   Future<void> _refreshControllers() async {
-    await QuranSettingsController.instance.load();
+    await getIt<QuranSettingsController>().load();
     await AudioSettingsController.instance.load();
     await PrayerSettingsController.instance.load();
-    await ThemeSettingsController.instance.load();
+    await getIt<ThemeSettingsController>().load();
   }
 
   Future<void> _rescheduleNotificationsIfNeeded() async {
@@ -168,7 +169,7 @@ class BackupService {
       DateComponents.from(now.add(const Duration(days: 1))),
       params,
     );
-    await PrayerNotificationService.instance.schedulePrayerTimes(
+    await getIt<PrayerNotificationService>().schedulePrayerTimes(
       today,
       tomorrow,
       settings,

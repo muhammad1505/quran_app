@@ -17,13 +17,11 @@ import 'package:quran_app/features/offline/presentation/pages/offline_manager_pa
 import 'package:quran_app/features/quran/presentation/pages/murotal_download_page.dart';
 import 'package:quran_app/core/services/prayer_notification_service.dart';
 
+import 'package:quran_app/core/di/injection.dart';
+
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
-
-  @override
-  State<SettingsPage> createState() => _SettingsPageState();
-}
-
+// ... (rest)
 class _SettingsPageState extends State<SettingsPage> {
   bool _enableNotifications = true;
   bool _manualLocationEnabled = false;
@@ -31,13 +29,13 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isBackupRunning = false;
   bool _isRestoreRunning = false;
   final QuranSettingsController _quranSettings =
-      QuranSettingsController.instance;
+      getIt<QuranSettingsController>();
   final AudioSettingsController _audioSettings =
       AudioSettingsController.instance;
   final PrayerSettingsController _prayerSettings =
       PrayerSettingsController.instance;
   final ThemeSettingsController _themeSettings =
-      ThemeSettingsController.instance;
+      getIt<ThemeSettingsController>();
 
   @override
   void initState() {
@@ -115,7 +113,7 @@ class _SettingsPageState extends State<SettingsPage> {
             leading: const Icon(Icons.notifications_active),
             onTap: () async {
               final messenger = ScaffoldMessenger.of(context);
-              final success = await PrayerNotificationService.instance
+              final success = await getIt<PrayerNotificationService>()
                   .scheduleTestNotification();
               if (!mounted) return;
               messenger.showSnackBar(
@@ -1150,11 +1148,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _syncPrayerNotifications(bool enabled) async {
     if (!enabled) {
-      await PrayerNotificationService.instance.cancelAll();
+      await getIt<PrayerNotificationService>().cancelAll();
       return;
     }
     final permissionGranted =
-        await PrayerNotificationService.instance.requestPermissions();
+        await getIt<PrayerNotificationService>().requestPermissions();
     if (!permissionGranted) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1188,7 +1186,7 @@ class _SettingsPageState extends State<SettingsPage> {
       DateComponents.from(DateTime.now().add(const Duration(days: 1))),
       params,
     );
-    await PrayerNotificationService.instance.schedulePrayerTimes(
+    await getIt<PrayerNotificationService>().schedulePrayerTimes(
       today,
       tomorrow,
       _prayerSettings.value,

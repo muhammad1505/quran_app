@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:quran/quran.dart' as quran;
 
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/audio_cache_service.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
 
@@ -45,7 +46,7 @@ class _MurotalDownloadPageState extends State<MurotalDownloadPage> {
 
   Future<void> _loadDownloaded() async {
     setState(() => _isLoading = true);
-    final result = await AudioCacheService.instance
+    final result = await getIt<AudioCacheService>()
         .listDownloadedSurahs(_selectedQariId);
     if (mounted) {
       setState(() {
@@ -60,11 +61,11 @@ class _MurotalDownloadPageState extends State<MurotalDownloadPage> {
     setState(() => _busySurahs.add(surahNumber));
     try {
       if (_downloadedSurahs.contains(surahNumber)) {
-        await AudioCacheService.instance
+        await getIt<AudioCacheService>()
             .deleteSurah(surahNumber, _selectedQariId);
         _downloadedSurahs.remove(surahNumber);
       } else {
-        await AudioCacheService.instance
+        await getIt<AudioCacheService>()
             .downloadSurah(surahNumber, _selectedQariId);
         _downloadedSurahs.add(surahNumber);
       }
@@ -109,11 +110,11 @@ class _MurotalDownloadPageState extends State<MurotalDownloadPage> {
     try {
       if (download) {
         for (var surah = 1; surah <= 114; surah++) {
-          await AudioCacheService.instance
+          await getIt<AudioCacheService>()
               .downloadSurah(surah, _selectedQariId);
         }
       } else {
-        await AudioCacheService.instance.deleteAllForQari(_selectedQariId);
+        await getIt<AudioCacheService>().deleteAllForQari(_selectedQariId);
       }
       await _loadDownloaded();
     } catch (e) {

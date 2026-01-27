@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:quran/quran.dart' as quran;
 
 import 'package:quran_app/core/services/tafsir_service.dart';
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 
 class TafsirPage extends StatelessWidget {
@@ -25,7 +26,7 @@ class TafsirPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final title =
         '${quran.getSurahName(surahNumber)} : $verseNumber';
-    final settings = QuranSettingsController.instance.value;
+    final settings = getIt<QuranSettingsController>().value;
     final future = TafsirService.instance.getTafsir(
       surah: surahNumber,
       ayah: verseNumber,
@@ -127,7 +128,7 @@ class _TafsirSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = QuranSettingsController.instance.value;
+    final settings = getIt<QuranSettingsController>().value;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [

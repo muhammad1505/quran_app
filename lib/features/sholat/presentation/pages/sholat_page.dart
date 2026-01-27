@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/prayer_notification_service.dart';
 import 'package:quran_app/features/prayer_times/presentation/pages/prayer_times_page.dart';
 import 'package:quran_app/features/prayer_times/presentation/widgets/prayer_times_summary_card.dart';
@@ -35,7 +36,7 @@ class _SholatPageState extends State<SholatPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notifications', value);
     if (!value) {
-      await PrayerNotificationService.instance.cancelAll();
+      await getIt<PrayerNotificationService>().cancelAll();
     }
   }
 

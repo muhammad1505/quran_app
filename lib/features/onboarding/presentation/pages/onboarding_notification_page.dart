@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/prayer_notification_service.dart';
 import 'package:quran_app/main.dart';
 
@@ -21,7 +22,7 @@ class _OnboardingNotificationPageState
     await prefs.setBool('notifications', _enabled);
     await prefs.setBool('onboarding_done', true);
     if (_enabled) {
-      await PrayerNotificationService.instance.requestPermissions();
+      await getIt<PrayerNotificationService>().requestPermissions();
     }
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(

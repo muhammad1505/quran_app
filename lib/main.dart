@@ -206,7 +206,7 @@ class _HomePageState extends State<HomePage> {
   bool _isDailyVerseLoading = false;
   Set<String> _bookmarkKeys = {};
   final QuranSettingsController _quranSettings =
-      QuranSettingsController.instance;
+      getIt<QuranSettingsController>();
 
   @override
   void initState() {

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/audio_cache_service.dart';
 import 'package:quran_app/core/services/tafsir_service.dart';
 import 'package:quran_app/core/services/translation_service.dart';
@@ -47,11 +48,11 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
     setState(() => _isLoading = true);
     final qariId = _audioSettings.value.qariId;
     final downloaded =
-        await AudioCacheService.instance.listDownloadedSurahs(qariId);
+        await getIt<AudioCacheService>().listDownloadedSurahs(qariId);
     final audioSize = await _calculateAudioSize(qariId);
     final tafsirReady = await TafsirService.instance.hasOfflineData();
     final tafsirCache = await TafsirService.instance
-        .getCacheInfo(QuranSettingsController.instance.value.tafsirSource);
+        .getCacheInfo(getIt<QuranSettingsController>().value.tafsirSource);
     if (!mounted) return;
     setState(() {
       _downloadedCount = downloaded.length;
@@ -65,7 +66,7 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
 
   Future<int> _calculateAudioSize(String qariId) async {
     final dir = await getApplicationDocumentsDirectory();
-    final qari = AudioCacheService.instance.qariById(qariId);
+    final qari = getIt<AudioCacheService>().qariById(qariId);
     final audioDir = Directory('${dir.path}/audio/${qari.audioSlug}');
     if (!audioDir.existsSync()) return 0;
     var total = 0;
@@ -86,7 +87,7 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
   @override
   Widget build(BuildContext context) {
     final translationInfo = _translationStatus();
-    final tafsirSource = QuranSettingsController.instance.value.tafsirSource;
+    final tafsirSource = getIt<QuranSettingsController>().value.tafsirSource;
     return Scaffold(
       appBar: AppBar(title: const Text('Unduhan Offline')),
       body: _isLoading
@@ -179,7 +180,7 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
                 Card(
                   child: ListTile(
                     title: Text(
-                      'Qari: ${AudioCacheService.instance.qariById(_audioSettings.value.qariId).label}',
+                      'Qari: ${getIt<AudioCacheService>().qariById(_audioSettings.value.qariId).label}',
                     ),
                     subtitle: Text(
                       '$_downloadedCount/114 surah • $_audioSizeLabel',
@@ -200,7 +201,7 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
                   onPressed: _downloadedCount == 0
                       ? null
                       : () async {
-                          await AudioCacheService.instance
+                          await getIt<AudioCacheService>()
                               .deleteAllForQari(_audioSettings.value.qariId);
                           await _refresh();
                         },

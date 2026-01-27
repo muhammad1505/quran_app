@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 import 'package:quran_app/features/quran/presentation/pages/quran_page.dart';
 import 'package:quran_app/features/settings/presentation/pages/settings_page.dart';
@@ -13,7 +14,7 @@ class TafsirHubPage extends StatefulWidget {
 
 class _TafsirHubPageState extends State<TafsirHubPage> {
   final QuranSettingsController _quranSettings =
-      QuranSettingsController.instance;
+      getIt<QuranSettingsController>();
 
   @override
   void initState() {
