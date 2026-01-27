@@ -20,6 +20,8 @@ import 'package:quran_app/core/services/word_by_word_service.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 import 'package:quran_app/core/settings/theme_settings.dart';
+import 'package:quran_app/features/quran/presentation/widgets/audio_player_sheet.dart';
+import 'package:quran_app/features/quran/presentation/widgets/display_settings_sheet.dart';
 import 'package:quran_app/features/quran/presentation/pages/tafsir_page.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -1039,145 +1041,11 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
       context: context,
       isScrollControlled: true,
       builder: (context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([_quranSettings, _themeSettings]),
-      builder: (context, _) {
-        final settings = _quranSettings.value;
-        return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Text(
-                          'Tampilan',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const Spacer(),
-                        Text(
-                          'Aa',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _buildSlider(
-                      label: 'Ukuran Arab',
-                      value: settings.arabicFontSize,
-                      min: 26,
-                      max: 38,
-                      onChanged: (value) =>
-                          _quranSettings.setArabicFontSize(value),
-                    ),
-                    _buildSlider(
-                      label: 'Ukuran Terjemahan',
-                      value: settings.translationFontSize,
-                      min: 12,
-                      max: 20,
-                      onChanged: (value) =>
-                          _quranSettings.setTranslationFontSize(value),
-                    ),
-                    _buildSlider(
-                      label: 'Spasi Baris Arab',
-                      value: settings.arabicLineHeight,
-                      min: 1.6,
-                      max: 2.6,
-                      onChanged: (value) =>
-                          _quranSettings.setArabicLineHeight(value),
-                    ),
-                    _buildSlider(
-                      label: 'Spasi Baris Terjemahan',
-                      value: settings.translationLineHeight,
-                      min: 1.2,
-                      max: 2.2,
-                      onChanged: (value) =>
-                          _quranSettings.setTranslationLineHeight(value),
-                    ),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<ArabicFontFamily>(
-                      initialValue: settings.arabicFontFamily,
-                      decoration: const InputDecoration(
-                        labelText: 'Font Arab',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: ArabicFontFamily.values
-                          .map(
-                            (font) => DropdownMenuItem(
-                              value: font,
-                              child: Text(font.label),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          _quranSettings.setArabicFontFamily(value);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    SwitchListTile(
-                      title: const Text('Transliterasi (Latin)'),
-                      value: settings.showLatin,
-                      onChanged: (value) => _quranSettings.setShowLatin(value),
-                    ),
-                    SwitchListTile(
-                      title: const Text('Tajwid'),
-                      value: settings.showTajwid,
-                      onChanged: (value) => _quranSettings.setShowTajwid(value),
-                    ),
-                    SwitchListTile(
-                      title: const Text('Terjemahan per kata'),
-                      value: settings.showWordByWord,
-                      onChanged: (value) =>
-                          _quranSettings.setShowWordByWord(value),
-                    ),
-                    const Divider(height: 24),
-                    _buildThemeSelector(),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
+        return const QuranDisplaySettingsSheet();
       },
     );
   }
 
-  Widget _buildThemeSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Mode Tema',
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-        const SizedBox(height: 8),
-        SegmentedButton<AppThemeMode>(
-          segments: const [
-            ButtonSegment(value: AppThemeMode.light, label: Text('Terang')),
-            ButtonSegment(value: AppThemeMode.dark, label: Text('Gelap')),
-            ButtonSegment(value: AppThemeMode.sepia, label: Text('Sepia')),
-          ],
-          selected: {_themeSettings.value.mode},
-          onSelectionChanged: (value) {
-            if (value.isEmpty) return;
-            _themeSettings.setThemeMode(value.first);
-          },
-        ),
-      ],
-    );
-  }
 
   void _showReaderMoreSheet() {
     showModalBottomSheet(
@@ -1270,13 +1138,6 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
     );
   }
 
-  Widget _buildSlider({
-    required String label,
-    required double value,
-    required double min,
-    required double max,
-    required ValueChanged<double> onChanged,
-  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(
@@ -1445,7 +1306,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return _AudioPlayerSheet(
+        return QuranAudioPlayerSheet(
           player: _audioPlayer,
           surahNumber: widget.surahNumber,
           isAyahMode: _isAyahMode,
@@ -2211,213 +2072,3 @@ class _BookmarkData {
   const _BookmarkData({required this.bookmarks, required this.folders});
 }
 
-class _AudioPlayerSheet extends StatelessWidget {
-  final AudioPlayer player;
-  final int surahNumber;
-  final bool isAyahMode;
-  final int? currentAyah;
-  final bool isPlaying;
-  final bool isLoading;
-  final bool repeatOne;
-  final double speed;
-  final VoidCallback onPlayPause;
-  final VoidCallback? onNextAyah;
-  final VoidCallback? onPrevAyah;
-  final VoidCallback onToggleRepeat;
-  final ValueChanged<double> onSpeedChanged;
-
-  const _AudioPlayerSheet({
-    required this.player,
-    required this.surahNumber,
-    required this.isAyahMode,
-    required this.currentAyah,
-    required this.isPlaying,
-    required this.isLoading,
-    required this.repeatOne,
-    required this.speed,
-    required this.onPlayPause,
-    required this.onNextAyah,
-    required this.onPrevAyah,
-    required this.onToggleRepeat,
-    required this.onSpeedChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final title = isAyahMode && currentAyah != null
-        ? 'Ayat ${currentAyah!} • ${quran.getSurahName(surahNumber)}'
-        : 'Murotal ${quran.getSurahName(surahNumber)}';
-    return SafeArea(
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.85,
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 42,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            StreamBuilder<Duration?>(
-              stream: player.durationStream,
-              builder: (context, snapshot) {
-                final duration = snapshot.data ?? Duration.zero;
-                return StreamBuilder<Duration>(
-                  stream: player.positionStream,
-                  builder: (context, positionSnapshot) {
-                    final position = positionSnapshot.data ?? Duration.zero;
-                    final max = duration.inMilliseconds.toDouble();
-                    final value = position.inMilliseconds.toDouble();
-                    return Column(
-                      children: [
-                        Slider(
-                          value: max > 0 ? value.clamp(0, max) : 0,
-                          max: max > 0 ? max : 1,
-                          onChanged: max > 0
-                              ? (val) {
-                                  player.seek(
-                                    Duration(milliseconds: val.round()),
-                                  );
-                                }
-                              : null,
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Row(
-                            children: [
-                              Text(_formatDuration(position)),
-                              const Spacer(),
-                              Text(_formatDuration(duration)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  onPressed: onPrevAyah,
-                  icon: const Icon(Icons.skip_previous),
-                ),
-                const SizedBox(width: 12),
-                IconButton(
-                  onPressed: isLoading ? null : onPlayPause,
-                  icon: isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                  iconSize: 32,
-                ),
-                const SizedBox(width: 12),
-                IconButton(
-                  onPressed: onNextAyah,
-                  icon: const Icon(Icons.skip_next),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: onToggleRepeat,
-                    icon: Icon(
-                      repeatOne ? Icons.repeat_one : Icons.repeat,
-                      color:
-                          repeatOne ? Theme.of(context).primaryColor : null,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  PopupMenuButton<double>(
-                    onSelected: onSpeedChanged,
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(value: 0.75, child: Text('0.75x')),
-                      PopupMenuItem(value: 1.0, child: Text('1.0x')),
-                      PopupMenuItem(value: 1.25, child: Text('1.25x')),
-                      PopupMenuItem(value: 1.5, child: Text('1.5x')),
-                    ],
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color:
-                            Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                      ),
-                      child: Text(
-                        '${speed.toStringAsFixed(2).replaceAll('.00', '')}x',
-                        style: TextStyle(
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  if (isAyahMode)
-                    Text(
-                      'Mode Ayat',
-                      style: Theme.of(context).textTheme.labelMedium,
-                    )
-                  else
-                    Text(
-                      'Mode Surah',
-                      style: Theme.of(context).textTheme.labelMedium,
-                    ),
-                ],
-              ),
-            ),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Text(
-                'Ketuk mini player untuk membuka panel ini.',
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
-  }
-}
