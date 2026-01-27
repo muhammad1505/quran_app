@@ -167,9 +167,23 @@ class MockHttpClient extends Fake implements HttpClient {
 
 class MockHttpClientRequest extends Fake implements HttpClientRequest {
   @override
+  bool followRedirects = true;
+
+  @override
+  final HttpHeaders headers = MockHttpHeaders();
+
+  @override
   Future<HttpClientResponse> close() async {
     return MockHttpClientResponse();
   }
+}
+
+class MockHttpHeaders extends Fake implements HttpHeaders {
+  @override
+  void add(String name, Object value, {bool preserveHeaderCase = false}) {}
+
+  @override
+  void set(String name, Object value, {bool preserveHeaderCase = false}) {}
 }
 
 class MockHttpClientResponse extends Fake implements HttpClientResponse {
