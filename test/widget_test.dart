@@ -5,9 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quran_app/main.dart';
 import 'package:quran_app/core/di/injection.dart';
 import 'package:get_it/get_it.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() {
   setUp(() async {
+    GoogleFonts.config.allowRuntimeFetching = false;
     await GetIt.instance.reset();
     await configureDependencies();
   });
