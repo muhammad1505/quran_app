@@ -370,12 +370,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 leading: const Icon(Icons.account_circle_outlined),
                 title: Text(
                   isLoggedIn
-                      ? (user.displayName ?? 'Akun Google')
+                      ? (user.isAnonymous ? 'Akun Tamu' : (user.displayName ?? 'Pengguna'))
                       : 'Belum login',
                 ),
                 subtitle: Text(
                   isLoggedIn
-                      ? (user.email ?? 'Login dengan Google')
+                      ? 'ID: ${user.uid.substring(0, 8)}...'
                       : 'Masuk untuk backup data & pengaturan',
                 ),
                 trailing: isLoggedIn
@@ -408,11 +408,11 @@ class _SettingsPageState extends State<SettingsPage> {
                         onPressed: () async {
                           final messenger = ScaffoldMessenger.of(context);
                           try {
-                            await AuthService.instance.signInWithGoogle();
+                            await AuthService.instance.signInAnonymously();
                             if (!mounted) return;
                             messenger.showSnackBar(
                               const SnackBar(
-                                content: Text('Login berhasil.'),
+                                content: Text('Login Tamu berhasil.'),
                               ),
                             );
                           } catch (e) {
@@ -422,7 +422,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             );
                           }
                         },
-                        child: const Text('Login Google'),
+                        child: const Text('Masuk (Tamu)'),
                       ),
               ),
             ),
