@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,13 +7,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quran_app/main.dart';
 import 'package:quran_app/core/di/injection.dart';
 import 'package:get_it/get_it.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 void main() {
   setUp(() async {
-    GoogleFonts.config.allowRuntimeFetching = false;
     await GetIt.instance.reset();
     await configureDependencies();
+    HttpOverrides.global = MockHttpOverrides();
   });
 
   testWidgets('App smoke test', (WidgetTester tester) async {
@@ -143,4 +144,60 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
+}
+
+class MockHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return MockHttpClient();
+  }
+}
+
+class MockHttpClient extends Fake implements HttpClient {
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) async {
+    return MockHttpClientRequest();
+  }
+}
+
+class MockHttpClientRequest extends Fake implements HttpClientRequest {
+  @override
+  Future<HttpClientResponse> close() async {
+    return MockHttpClientResponse();
+  }
+}
+
+class MockHttpClientResponse extends Fake implements HttpClientResponse {
+  @override
+  int get statusCode => 200;
+
+  @override
+  int get contentLength => 0;
+
+  @override
+  HttpClientResponseCompressionState get compressionState =>
+      HttpClientResponseCompressionState.notCompressed;
+
+  @override
+  Stream<List<int>> map<S>(S Function(List<int> event) convert) {
+    return const Stream.empty();
+  }
+
+  @override
+  Future<void> pipe(StreamConsumer<List<int>> streamConsumer) async {}
+  
+  @override
+  StreamSubscription<List<int>> listen(
+    void Function(List<int> event)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    return const Stream<List<int>>.empty().listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+  }
 }
