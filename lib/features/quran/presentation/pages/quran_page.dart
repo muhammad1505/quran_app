@@ -1036,7 +1036,6 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
   }
 
   // Helper getters for old usage (if any remain)
-  ThemeSettingsController get _themeSettings => getIt<ThemeSettingsController>();
 
 
   void _showReaderMoreSheet() {
