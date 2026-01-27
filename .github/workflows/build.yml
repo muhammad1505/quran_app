@@ -1,42 +1,51 @@
-name: Flutter CI Build
+name: Build & Release
 
 on:
   push:
     tags:
-      - '*'
+      - 'v*'
+    branches:
+      - main
   workflow_dispatch:
-
-concurrency:
-  group: flutter-ci-${{ github.ref }}
-  cancel-in-progress: false
 
 jobs:
   build:
+    name: Build & Release APK
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Required for creating GitHub Releases
+
     steps:
-      - uses: actions/checkout@v4
+      # 1. Setup Environment
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: subosito/flutter-action@v2
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          cache: true
 
-      - name: Prepare Release Metadata
-        run: |
-          echo "APP_NAME=Al-Quran Terjemahan" >> $GITHUB_ENV
-          echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
-          echo "APK_NAME=Al-Quran Terjemahan ${GITHUB_REF_NAME}.apk" >> $GITHUB_ENV
-
-      - name: Install dependencies
+      - name: Install Dependencies
         run: flutter pub get
 
-      - name: Scaffold Platform Support
-        run: flutter create .
+      # 2. Quality Assurance
+      - name: Analyze Code
+        run: flutter analyze
 
-      - name: Prepare Android Signing
+      - name: Run Unit Tests
+        run: flutter test
+
+      # 3. Prepare Android Environment
+      - name: Decode Keystore
         if: secrets.ANDROID_KEYSTORE_BASE64 != ''
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/keystore.jks
@@ -47,341 +56,147 @@ jobs:
           keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
           EOF
 
-      - name: Print Release SHA1
-        if: secrets.ANDROID_KEYSTORE_BASE64 != ''
+      - name: Configure Android Project (Injection)
         run: |
-          keytool -list -v -keystore android/keystore.jks \
-            -alias "${{ secrets.ANDROID_KEY_ALIAS }}" -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
-            | grep SHA1
+          # 1. Inject Permissions to AndroidManifest.xml
+          sed -i 's|</manifest>|<uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/><uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/><uses-permission android:name="android.permission.POST_NOTIFICATIONS"/><uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/></manifest>|' android/app/src/main/AndroidManifest.xml
 
-      - name: Inject Android Configuration
-        run: |
-          # Inject Permissions
-          sed -i 's|</manifest>|<uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/><uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/><uses-permission android:name="android.permission.POST_NOTIFICATIONS"/></manifest>|' android/app/src/main/AndroidManifest.xml
-
-          # Update App Name
+          # 2. Inject App Name Resources
           mkdir -p android/app/src/main/res/values
           cat > android/app/src/main/res/values/strings.xml <<'XML'
           <resources>
             <string name="app_name">Al-Quran Terjemahan</string>
           </resources>
           XML
-          
-          # Firebase config (optional)
+
+          # 3. Handle Firebase Config (if exists in repo or secrets could be added here)
           if [ -f "firebase/google-services.json" ]; then
-            mkdir -p android/app
             cp firebase/google-services.json android/app/google-services.json
-          fi
-          if [ -f "firebase/GoogleService-Info.plist" ]; then
-            mkdir -p ios/Runner
-            cp firebase/GoogleService-Info.plist ios/Runner/GoogleService-Info.plist
-          fi
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          app_name = "Al-Quran Terjemahan"
-          manifest_path = Path("android/app/src/main/AndroidManifest.xml")
-          if manifest_path.exists():
-              text = manifest_path.read_text()
-              text = re.sub(r'android:label=\"[^\"]*\"', 'android:label=\"@string/app_name\"', text)
-              manifest_path.write_text(text)
-          ios_plist = Path("ios/Runner/Info.plist")
-          if ios_plist.exists():
-              text = ios_plist.read_text()
-              if "CFBundleDisplayName" in text:
-                  text = re.sub(r'(<key>CFBundleDisplayName</key>\\s*<string>)(.*?)(</string>)', rf"\\1{app_name}\\3", text, flags=re.S)
-              else:
-                  text = text.replace(
-                      "</dict>",
-                      f"  <key>CFBundleDisplayName</key>\\n  <string>{app_name}</string>\\n</dict>",
-                  )
-              ios_plist.write_text(text)
-          PY
-          
-          # Inject Gradle Config (Support Groovy and Kotlin DSL)
-          if [ -f "android/app/build.gradle" ]; then
-            echo "Detected Groovy DSL"
-            sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle
-            python - <<'PY'
-          from pathlib import Path
-          import re
-          path = Path("android/app/build.gradle")
-          text = path.read_text()
-          if "keystoreProperties" not in text:
-              snippet = (
-                  "def keystoreProperties = new Properties()\n"
-                  "def keystorePropertiesFile = rootProject.file('key.properties')\n"
-                  "if (keystorePropertiesFile.exists()) {\n"
-                  "    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n"
-                  "}\n"
-                  "def hasKeystore = keystorePropertiesFile.exists()\n\n"
-              )
-              if "android {" in text:
-                  text = text.replace("android {", snippet + "android {", 1)
-              else:
-                  text = snippet + text
-          if "coreLibraryDesugaringEnabled" not in text:
-              text = text.replace("compileOptions {", "compileOptions {\n        coreLibraryDesugaringEnabled true", 1)
-          if "signingConfigs" not in text:
-              text = text.replace("android {", "android {\n    signingConfigs {\n        release {\n            if (hasKeystore) {\n                keyAlias keystoreProperties['keyAlias']\n                keyPassword keystoreProperties['keyPassword']\n                storeFile file(keystoreProperties['storeFile'])\n                storePassword keystoreProperties['storePassword']\n            }\n        }\n    }", 1)
-          if "signingConfig signingConfigs.release" not in text:
-              text = text.replace("signingConfig signingConfigs.debug", "if (hasKeystore) {\n                signingConfig signingConfigs.release\n            } else {\n                signingConfig signingConfigs.debug\n            }", 1)
-          if "desugar_jdk_libs" not in text:
-              if "dependencies {" in text:
-                  text = text.replace("dependencies {", "dependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'", 1)
-              else:
-                  text += ("\n\ndependencies {\n" "    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'\n" "}\n")
-          path.write_text(text)
-          PY
-          elif [ -f "android/app/build.gradle.kts" ]; then
-            echo "Detected Kotlin DSL"
-            sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/' android/app/build.gradle.kts
-            python - <<'PY'
-          from pathlib import Path
-          import re
-          path = Path("android/app/build.gradle.kts")
-          text = path.read_text()
-          if "keystoreProperties" not in text:
-              snippet = (
-                  "import java.util.Properties\n"
-                  "import java.io.FileInputStream\n\n"
-                  "val keystoreProperties = Properties()\n"
-                  "val keystorePropertiesFile = rootProject.file(\"key.properties\")\n"
-                  "if (keystorePropertiesFile.exists()) {\n"
-                  "    keystoreProperties.load(FileInputStream(keystorePropertiesFile))\n"
-                  "}\n"
-                  "val hasKeystore = keystorePropertiesFile.exists()\n\n"
-              )
-              if "android {" in text:
-                  text = text.replace("android {", snippet + "android {", 1)
-              else:
-                  text = snippet + text
-          if "isCoreLibraryDesugaringEnabled" not in text:
-              text = text.replace("compileOptions {", "compileOptions {\n        isCoreLibraryDesugaringEnabled = true", 1)
-          if "signingConfigs" not in text:
-              text = text.replace("android {", "android {\n    signingConfigs {\n        create(\"release\") {\n            if (hasKeystore) {\n                keyAlias = keystoreProperties[\"keyAlias\"] as String\n                keyPassword = keystoreProperties[\"keyPassword\"] as String\n                storeFile = file(keystoreProperties[\"storeFile\"] as String)\n                storePassword = keystoreProperties[\"storePassword\"] as String\n            }\n        }\n    }", 1)
-          if "signingConfig = signingConfigs.getByName(\"release\")" not in text:
-              text = text.replace("signingConfig = signingConfigs.getByName(\"debug\")", "signingConfig = if (hasKeystore) signingConfigs.getByName(\"release\") else signingConfigs.getByName(\"debug\")", 1)
-          if "desugar_jdk_libs" not in text:
-              if "dependencies {" in text:
-                  text = text.replace("dependencies {", "dependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")", 1)
-              else:
-                  text += ("\n\ndependencies {\n" "    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")\n" "}\n")
-          path.write_text(text)
-          PY
+            echo "Google Services JSON copied."
           else
-            echo "Error: Neither build.gradle nor build.gradle.kts found in android/app/"
-            ls -R android/app
+            echo "Warning: google-services.json not found."
+          fi
+
+          # 4. Inject Gradle Configurations (Signing, Firebase Plugin, Desugaring)
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          def inject_gradle_config():
+              gradle_path = Path("android/app/build.gradle")
+              if not gradle_path.exists():
+                  print("build.gradle not found, skipping injection.")
+                  return
+
+              text = gradle_path.read_text()
+              
+              # Inject Keystore Config
+              if "keystoreProperties" not in text:
+                  keystore_snippet = (
+                      "def keystoreProperties = new Properties()\n"
+                      "def keystorePropertiesFile = rootProject.file('key.properties')\n"
+                      "if (keystorePropertiesFile.exists()) {\n"
+                      "    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n"
+                      "}
+"
+                      "def hasKeystore = keystorePropertiesFile.exists()\n\n"
+                  )
+                  if "android {" in text:
+                      text = text.replace("android {", keystore_snippet + "android {", 1)
+                  else:
+                      text = keystore_snippet + text
+
+              # Inject Signing Configs
+              if "signingConfigs" not in text:
+                  signing_snippet = (
+                      "    signingConfigs {\n"
+                      "        release {\n"
+                      "            if (hasKeystore) {\n"
+                      "                keyAlias keystoreProperties['keyAlias']\n"
+                      "                keyPassword keystoreProperties['keyPassword']\n"
+                      "                storeFile file(keystoreProperties['storeFile'])\n"
+                      "                storePassword keystoreProperties['storePassword']\n"
+                      "            }\n"
+                      "        }\n"
+                      "    }\n"
+                  )
+                  text = text.replace("android {", "android {\n" + signing_snippet, 1)
+
+              # Apply Signing Config to Release
+              if "signingConfig signingConfigs.release" not in text:
+                  text = text.replace(
+                      "signingConfig signingConfigs.debug",
+                      "if (hasKeystore) {\n                signingConfig signingConfigs.release\n            } else {\n                signingConfig signingConfigs.debug\n            }",
+                      1
+                  )
+
+              # Enable Core Library Desugaring (Java 8+ features)
+              if "coreLibraryDesugaringEnabled" not in text:
+                  text = text.replace("compileOptions {", "compileOptions {\n        coreLibraryDesugaringEnabled true", 1)
+              
+              if "desugar_jdk_libs" not in text:
+                  dep_line = "    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'"
+                  if "dependencies {" in text:
+                      text = text.replace("dependencies {", "dependencies {\n" + dep_line, 1)
+                  else:
+                      text += "\ndependencies {\n" + dep_line + "\n}\n"
+
+              # Apply Google Services Plugin (for Firebase)
+              if "com.google.gms.google-services" not in text:
+                  text += "\napply plugin: 'com.google.gms.google-services'\n"
+
+              gradle_path.write_text(text)
+              print("android/app/build.gradle injected successfully.")
+
+          def inject_root_gradle():
+              root_gradle = Path("android/build.gradle")
+              if not root_gradle.exists():
+                  return
+              
+              text = root_gradle.read_text()
+              if "com.google.gms:google-services" not in text:
+                  # Add classpath dependency
+                  if "dependencies {" in text:
+                      text = text.replace(
+                          "dependencies {", 
+                          "dependencies {\n        classpath 'com.google.gms:google-services:4.4.1'", 
+                          1
+                      )
+                  else:
+                      print("Warning: Could not find dependencies block in root build.gradle")
+              
+              root_gradle.write_text(text)
+              print("android/build.gradle injected successfully.")
+
+          if __name__ == "__main__":
+              inject_gradle_config()
+              inject_root_gradle()
+          PY
+
+      - name: Prepare Assets (Adzan)
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          chmod +x tools/prepare_adzan_assets.sh
+          bash tools/prepare_adzan_assets.sh
+
+      # 4. Build
+      - name: Build Release APK
+        run: flutter build apk --release
+
+      - name: Verify Artifact
+        run: |
+          if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+            echo "APK generated successfully."
+            mv build/app/outputs/flutter-apk/app-release.apk "Al-Quran-Terjemahan-${{ github.ref_name }}.apk"
+          else
+            echo "Error: APK not found!"
             exit 1
           fi
 
-          # Google Services plugin (only if config exists)
-          if [ -f "android/app/google-services.json" ]; then
-            if [ -f "android/build.gradle" ]; then
-              python - <<'PY'
-          from pathlib import Path
-          import re
-          path = Path("android/build.gradle")
-          text = path.read_text()
-          if "buildscript" not in text:
-              text = (
-                  "buildscript {\n"
-                  "    repositories {\n"
-                  "        google()\n"
-                  "        mavenCentral()\n"
-                  "    }\n"
-                  "    dependencies {\n"
-                  "        classpath 'com.google.gms:google-services:4.4.1'\n"
-                  "    }\n"
-                  "}\n\n"
-              ) + text
-          else:
-              # Ensure repositories include google/mavenCentral
-              def ensure_repo(block):
-                  if "google()" not in block:
-                      block = block.replace("repositories {", "repositories {\n        google()", 1)
-                  if "mavenCentral()" not in block:
-                      block = block.replace("repositories {", "repositories {\n        mavenCentral()", 1)
-                  return block
-              match = re.search(r"buildscript\\s*\\{", text)
-              if match:
-                  start = match.start()
-                  repo_match = re.search(r"repositories\\s*\\{", text[start:])
-                  if repo_match:
-                      repo_start = start + repo_match.start()
-                      # insert repositories entries if missing
-                      before = text[:repo_start]
-                      after = text[repo_start:]
-                      after = ensure_repo(after)
-                      text = before + after
-          if "com.google.gms:google-services" not in text:
-              if "dependencies {" in text:
-                  text = text.replace(
-                      "dependencies {",
-                      "dependencies {\n        classpath 'com.google.gms:google-services:4.4.1'",
-                      1,
-                  )
-              else:
-                  text += (
-                      "\n\nbuildscript {\n"
-                      "    repositories {\n"
-                      "        google()\n"
-                      "        mavenCentral()\n"
-                      "    }\n"
-                      "    dependencies {\n"
-                      "        classpath 'com.google.gms:google-services:4.4.1'\n"
-                      "    }\n"
-                      "}\n"
-                  )
-          path.write_text(text)
-          PY
-            fi
-            if [ -f "android/app/build.gradle" ]; then
-              python - <<'PY'
-          from pathlib import Path
-          path = Path("android/app/build.gradle")
-          text = path.read_text()
-          if "com.google.gms.google-services" not in text:
-              if "apply plugin: 'com.android.application'" in text:
-                  text = text.replace(
-                      "apply plugin: 'com.android.application'",
-                      "apply plugin: 'com.android.application'\napply plugin: 'com.google.gms.google-services'",
-                      1,
-                  )
-              else:
-                  text += "\napply plugin: 'com.google.gms.google-services'\n"
-          path.write_text(text)
-          PY
-            fi
-            if [ -f "android/build.gradle.kts" ]; then
-              python - <<'PY'
-          from pathlib import Path
-          import re
-          path = Path("android/build.gradle.kts")
-          text = path.read_text()
-          if "buildscript" not in text:
-              text = (
-                  "buildscript {\n"
-                  "    repositories {\n"
-                  "        google()\n"
-                  "        mavenCentral()\n"
-                  "    }\n"
-                  "    dependencies {\n"
-                  "        classpath(\"com.google.gms:google-services:4.4.1\")\n"
-                  "    }\n"
-                  "}\n\n"
-              ) + text
-          else:
-              # Ensure repositories include google/mavenCentral
-              def ensure_repo(block):
-                  if "google()" not in block:
-                      block = block.replace("repositories {", "repositories {\n        google()", 1)
-                  if "mavenCentral()" not in block:
-                      block = block.replace("repositories {", "repositories {\n        mavenCentral()", 1)
-                  return block
-              match = re.search(r"buildscript\\s*\\{", text)
-              if match:
-                  start = match.start()
-                  repo_match = re.search(r"repositories\\s*\\{", text[start:])
-                  if repo_match:
-                      repo_start = start + repo_match.start()
-                      before = text[:repo_start]
-                      after = text[repo_start:]
-                      after = ensure_repo(after)
-                      text = before + after
-          if "com.google.gms:google-services" not in text:
-              if "dependencies {" in text:
-                  text = text.replace(
-                      "dependencies {",
-                      "dependencies {\n        classpath(\"com.google.gms:google-services:4.4.1\")",
-                      1,
-                  )
-              else:
-                  text += (
-                      "\n\nbuildscript {\n"
-                      "    repositories {\n"
-                      "        google()\n"
-                      "        mavenCentral()\n"
-                      "    }\n"
-                      "    dependencies {\n"
-                      "        classpath(\"com.google.gms:google-services:4.4.1\")\n"
-                      "    }\n"
-                      "}\n"
-                  )
-          path.write_text(text)
-          PY
-            fi
-            if [ -f "android/app/build.gradle.kts" ]; then
-              python - <<'PY'
-          from pathlib import Path
-          path = Path("android/app/build.gradle.kts")
-          text = path.read_text()
-          if "com.google.gms.google-services" not in text:
-              if "plugins {" in text:
-                  text = text.replace(
-                      "plugins {",
-                      "plugins {\n    id(\"com.google.gms.google-services\")",
-                      1,
-                  )
-              else:
-                  text = (
-                      "plugins {\n"
-                      "    id(\"com.google.gms.google-services\")\n"
-                      "}\n"
-                      + text
-                  )
-          path.write_text(text)
-          PY
-            fi
-          fi
-
-      - name: Prepare Adzan Audio
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-          bash tools/prepare_adzan_assets.sh
-
-      - name: Generate App Icons
-        run: flutter pub run flutter_launcher_icons
-
-      - name: Analyze
-        run: flutter analyze
-
-      - name: Test
-        run: flutter test
-
-      - name: Build APK
-        run: flutter build apk --release
-
-      - name: Rename APK
-        run: |
-          mkdir -p build/out
-          cp "build/app/outputs/flutter-apk/app-release.apk" "build/out/${APK_NAME}"
-
-      - name: Generate Changelog
-        run: |
-          git fetch --tags --force
-          CURRENT_TAG="${GITHUB_REF_NAME}"
-          PREV_TAG=$(git describe --tags --abbrev=0 "${CURRENT_TAG}^" 2>/dev/null || true)
-          echo "## Changelog" > release_notes.md
-          echo "" >> release_notes.md
-          if [ -n "$PREV_TAG" ]; then
-            echo "### Perubahan sejak ${PREV_TAG}" >> release_notes.md
-            git log --pretty=format:"- %s (%h)" "${PREV_TAG}..${CURRENT_TAG}" >> release_notes.md
-          else
-            echo "### Perubahan pada ${CURRENT_TAG}" >> release_notes.md
-            git log --pretty=format:"- %s (%h)" -n 20 "${CURRENT_TAG}" >> release_notes.md
-          fi
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.APK_NAME }}
-          path: build/out/${{ env.APK_NAME }}
-
-      - name: Publish GitHub Release
+      # 5. Release (Only on tags)
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ env.APP_NAME }} ${{ env.VERSION }}
-          body_path: release_notes.md
-          files: build/out/${{ env.APK_NAME }}
+          files: "Al-Quran-Terjemahan-${{ github.ref_name }}.apk"
+          generate_release_notes: true
