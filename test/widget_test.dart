@@ -176,6 +176,9 @@ class MockHttpClientRequest extends Fake implements HttpClientRequest {
   int contentLength = -1;
 
   @override
+  bool persistentConnection = true;
+
+  @override
   final HttpHeaders headers = MockHttpHeaders();
 
   @override
