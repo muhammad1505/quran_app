@@ -66,15 +66,16 @@ class PrayerNotificationService {
     // Android 12+ (API 31+) requires SCHEDULE_EXACT_ALARM
     final status = await Permission.scheduleExactAlarm.status;
     if (status.isGranted) return true;
-    // status is usually 'denied' or 'permanentlyDenied' or 'restricted'
-    // but on older Android versions it might be 'granted' by default or not applicable.
-    // However, permission_handler might return 'denied' if the permission is not in manifest.
-    // We try to request it if possible, but for exact alarm, user often needs to go to settings.
+
     if (await Permission.scheduleExactAlarm.isDenied) {
-        final result = await Permission.scheduleExactAlarm.request();
-        return result.isGranted;
+      final result = await Permission.scheduleExactAlarm.request();
+      return result.isGranted;
     }
-    return true; 
+    
+    // If status is restricted or permanently denied, we can't do much.
+    // On older Android, it might be granted by default. 
+    // The current status is the source of truth if we can't request.
+    return status.isGranted;
   }
 
   Future<bool> _scheduleZonedWithFallback({
@@ -154,14 +155,17 @@ class PrayerNotificationService {
     return true;
   }
 
-  Future<void> schedulePrayerTimes(
+  Future<bool> schedulePrayerTimes(
     PrayerTimes today,
     PrayerTimes tomorrow,
     PrayerSettings settings,
   ) async {
     await initialize();
     final permissionGranted = await _ensureNotificationPermission();
-    if (!permissionGranted) return;
+    if (!permissionGranted) {
+      debugPrint('Notification permission not granted, cannot schedule prayer times.');
+      return false;
+    }
     await cancelAll();
 
     final now = DateTime.now();
@@ -181,6 +185,7 @@ class PrayerNotificationService {
       Prayer.isha: tomorrow.isha,
     };
 
+    bool allScheduledSuccessfully = true;
     for (final entry in prayers.entries) {
       final prayer = entry.key;
       if (!settings.isNotificationEnabled(prayer)) {
@@ -190,11 +195,15 @@ class PrayerNotificationService {
       if (time.isBefore(now)) {
         time = prayersTomorrow[prayer]!;
       }
-      await _scheduleNotification(prayer, time.add(offset), settings);
+      final success = await _scheduleNotification(prayer, time.add(offset), settings);
+      if (!success) {
+        allScheduledSuccessfully = false;
+      }
     }
+    return allScheduledSuccessfully;
   }
 
-  Future<void> _scheduleNotification(
+  Future<bool> _scheduleNotification(
     Prayer prayer,
     DateTime time,
     PrayerSettings settings,
@@ -212,16 +221,23 @@ class PrayerNotificationService {
       scheduled: scheduled,
       details: details,
     );
-    if (!success && settings.adzanSound != AdzanSound.defaultTone) {
+    if (success) return true;
+
+    // Fallback for when sound fails
+    if (settings.adzanSound != AdzanSound.defaultTone) {
       final fallbackDetails = _notificationDetails(settings, withSound: false);
-      await _scheduleZonedWithFallback(
+      success = await _scheduleZonedWithFallback(
         id: id,
         title: title,
         body: body,
         scheduled: scheduled,
         details: fallbackDetails,
       );
+      if (success) return true;
     }
+    
+    debugPrint('Failed to schedule notification for ${prayer.name}');
+    return false;
   }
 
   NotificationDetails _notificationDetails(
