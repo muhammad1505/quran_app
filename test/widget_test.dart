@@ -173,6 +173,9 @@ class MockHttpClientRequest extends Fake implements HttpClientRequest {
   int maxRedirects = 5;
 
   @override
+  int contentLength = -1;
+
+  @override
   final HttpHeaders headers = MockHttpHeaders();
 
   @override
