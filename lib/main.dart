@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:alfurqan/alfurqan.dart';
 import 'package:share_plus/share_plus.dart';
 import 'core/theme/app_theme.dart';
 import 'core/settings/theme_settings.dart';
@@ -334,7 +333,7 @@ class HomePage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withAlpha(26),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(

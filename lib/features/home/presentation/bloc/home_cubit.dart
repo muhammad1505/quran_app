@@ -10,8 +10,6 @@ import 'package:alfurqan/alfurqan.dart';
 import 'package:alfurqan/constant.dart';
 
 import 'package:quran_app/core/di/injection.dart';
-import 'package:get_it/get_it.dart';
-
 import 'package:injectable/injectable.dart';
 
 part 'home_state.dart';
