@@ -1,5 +1,11 @@
 import 'package:equatable/equatable.dart';
 
+enum DownloadStatus {
+  notDownloaded,
+  downloading,
+  downloaded,
+}
+
 abstract class QuranAudioState extends Equatable {
   const QuranAudioState();
 
@@ -20,6 +26,8 @@ class QuranAudioPlaying extends QuranAudioState {
   final Duration position;
   final Duration duration;
   final bool isAyahMode;
+  final bool isRepeatOne;
+  final DownloadStatus downloadStatus;
 
   const QuranAudioPlaying({
     required this.surahNumber,
@@ -27,25 +35,51 @@ class QuranAudioPlaying extends QuranAudioState {
     this.position = Duration.zero,
     this.duration = Duration.zero,
     required this.isAyahMode,
+    required this.isRepeatOne,
+    required this.downloadStatus,
   });
 
   @override
-  List<Object?> get props => [surahNumber, currentAyah, position, duration, isAyahMode];
+  List<Object?> get props => [
+        surahNumber,
+        currentAyah,
+        position,
+        duration,
+        isAyahMode,
+        isRepeatOne,
+        downloadStatus,
+      ];
 }
 
 class QuranAudioPaused extends QuranAudioState {
   final int surahNumber;
   final int? currentAyah;
   final bool isAyahMode;
+  final bool isRepeatOne;
+  final Duration position;
+  final Duration duration;
+  final DownloadStatus downloadStatus;
 
   const QuranAudioPaused({
     required this.surahNumber,
     this.currentAyah,
     required this.isAyahMode,
+    required this.isRepeatOne,
+    required this.position,
+    required this.duration,
+    required this.downloadStatus,
   });
-  
+
   @override
-  List<Object?> get props => [surahNumber, currentAyah, isAyahMode];
+  List<Object?> get props => [
+        surahNumber,
+        currentAyah,
+        isAyahMode,
+        isRepeatOne,
+        position,
+        duration,
+        downloadStatus,
+      ];
 }
 
 class QuranAudioError extends QuranAudioState {

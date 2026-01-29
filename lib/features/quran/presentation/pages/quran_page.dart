@@ -8,6 +8,7 @@ import 'package:alfurqan/constant.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
@@ -16,14 +17,14 @@ import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/audio_cache_service.dart';
 import 'package:quran_app/core/services/bookmark_service.dart';
 import 'package:quran_app/core/services/last_read_service.dart';
-import 'package:quran_app/core/services/translation_service.dart';
 import 'package:quran_app/core/services/word_by_word_service.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 import 'package:quran_app/core/settings/theme_settings.dart';
+import 'package:quran_app/features/quran/presentation/bloc/search/search_cubit.dart';
+import 'package:quran_app/features/quran/presentation/pages/tafsir_page.dart';
 import 'package:quran_app/features/quran/presentation/widgets/audio_player_sheet.dart';
 import 'package:quran_app/features/quran/presentation/widgets/display_settings_sheet.dart';
-import 'package:quran_app/features/quran/presentation/pages/tafsir_page.dart';
 import 'package:share_plus/share_plus.dart';
 
 class QuranPage extends StatefulWidget {
@@ -37,14 +38,6 @@ class _QuranPageState extends State<QuranPage> {
   final TextEditingController _searchController = TextEditingController();
   final QuranSettingsController _quranSettings =
       getIt<QuranSettingsController>();
-  String _query = '';
-  Timer? _searchDebounce;
-  Set<int> _translationMatches = {};
-  bool _isSearchingTranslation = false;
-  Map<String, String>? _translationSearchMap;
-  TranslationSource? _translationSearchSource;
-  bool _showNotesOnly = false;
-  String? _selectedFolderId;
   final List<_JuzStart> _juzStarts = const [
     _JuzStart(1, 1),
     _JuzStart(2, 142),
@@ -82,147 +75,12 @@ class _QuranPageState extends State<QuranPage> {
   void initState() {
     super.initState();
     _quranSettings.load();
-    _quranSettings.addListener(_onSettingsChanged);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _searchDebounce?.cancel();
-    _quranSettings.removeListener(_onSettingsChanged);
     super.dispose();
-  }
-
-  void _onSettingsChanged() {
-    if (_query.trim().length >= 3) {
-      _searchDebounce?.cancel();
-      _searchDebounce = Timer(const Duration(milliseconds: 100), () async {
-        await _searchTranslations(_query);
-      });
-    }
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  List<int> _filteredSurahNumbers() {
-    if (_query.isEmpty) {
-      return List<int>.generate(114, (index) => index + 1);
-    }
-    final normalized = _query.toLowerCase().trim();
-    final translationMatches = _translationMatches;
-    return List<int>.generate(114, (index) => index + 1).where((surah) {
-      final name = quran.getSurahName(surah).toLowerCase();
-      return name.contains(normalized) ||
-          surah.toString() == normalized ||
-          translationMatches.contains(surah);
-    }).toList();
-  }
-
-  void _onSearchChanged(String value) {
-    setState(() => _query = value);
-    _searchDebounce?.cancel();
-    final normalized = value.trim();
-    if (normalized.length < 3) {
-      setState(() {
-        _translationMatches = {};
-        _isSearchingTranslation = false;
-      });
-      return;
-    }
-    _searchDebounce = Timer(const Duration(milliseconds: 350), () async {
-      await _searchTranslations(normalized);
-    });
-  }
-
-  Future<void> _searchTranslations(String query) async {
-    if (!mounted) return;
-    setState(() => _isSearchingTranslation = true);
-    final normalized = query.toLowerCase();
-    final source = _quranSettings.value.translation;
-    final needsAsset = TranslationAssetService.instance.requiresAsset(source);
-    Map<String, String>? map;
-    if (needsAsset) {
-      if (_translationSearchSource != source || _translationSearchMap == null) {
-        map = await TranslationAssetService.instance.load(source);
-        _translationSearchMap = map;
-        _translationSearchSource = source;
-      } else {
-        map = _translationSearchMap;
-      }
-    }
-    final matches = <int>{};
-    if (needsAsset && map != null) {
-      for (final entry in map.entries) {
-        if (entry.value.toLowerCase().contains(normalized)) {
-          final surah = int.tryParse(entry.key.split(':').first);
-          if (surah != null) {
-            matches.add(surah);
-          }
-        }
-      }
-    } else {
-      for (var surah = 1; surah <= 114; surah++) {
-        final verses = quran.getVerseCount(surah);
-        for (var ayah = 1; ayah <= verses; ayah++) {
-          final translation = _translationForSearch(source, surah, ayah);
-          if (translation.toLowerCase().contains(normalized)) {
-            matches.add(surah);
-            break;
-          }
-        }
-      }
-    }
-    if (!mounted) return;
-    setState(() {
-      _translationMatches = matches;
-      _isSearchingTranslation = false;
-    });
-  }
-
-  String _translationForSearch(
-    TranslationSource source,
-    int surah,
-    int ayah,
-  ) {
-    if (TranslationAssetService.instance.requiresAsset(source) &&
-        _translationSearchMap != null) {
-      return _sanitizeTranslation(
-        _translationSearchMap!['$surah:$ayah'] ?? '',
-      );
-    }
-    if (source == TranslationSource.enSaheeh) {
-      return _sanitizeTranslation(
-        quran.getVerseTranslation(
-          surah,
-          ayah,
-          translation: quran.Translation.enSaheeh,
-        ),
-      );
-    }
-    final verseKey = '$surah:$ayah';
-    return _sanitizeTranslation(
-      AlQuran.translation(
-        _translationType(source),
-        verseKey,
-      ).text,
-    );
-  }
-
-  TranslationType _translationType(TranslationSource source) {
-    switch (source) {
-      case TranslationSource.idKemenag:
-      case TranslationSource.idKingFahad:
-      case TranslationSource.idSabiq:
-        return TranslationType.idIndonesianIslamicAffairsMinistry;
-      case TranslationSource.enAbdelHaleem:
-      case TranslationSource.enSaheeh:
-        return TranslationType.enMASAbdelHaleem;
-    }
-  }
-
-  String _sanitizeTranslation(String input) {
-    return input.replaceAll(RegExp(r'<[^>]*>'), '').trim();
   }
 
   @override
@@ -240,122 +98,150 @@ class _QuranPageState extends State<QuranPage> {
             ],
           ),
         ),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: TextField(
-                controller: _searchController,
-                onChanged: _onSearchChanged,
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search),
-                  hintText: 'Cari surah, juz, atau kata terjemahan…',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: Colors.grey.withValues(alpha: 0.2),
+        body: BlocProvider(
+          create: (context) => getIt<SearchCubit>(),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    context.read<SearchCubit>().search(value);
+                    setState(() {}); // To rebuild the Juz list
+                  },
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: 'Cari surah, juz, atau kata terjemahan…',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: Colors.grey.withOpacity(0.2),
+                      ),
                     ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: Colors.grey.withValues(alpha: 0.2),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: Colors.grey.withOpacity(0.2),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            if (_isSearchingTranslation)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 8),
-                child: LinearProgressIndicator(minHeight: 2),
+              BlocBuilder<SearchCubit, SearchState>(
+                builder: (context, state) {
+                  if (state is SearchLoading) {
+                    return const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: LinearProgressIndicator(minHeight: 2),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
               ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _buildSurahList(context),
-                  _buildJuzList(context),
-                  _buildBookmarkList(context),
-                ],
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _buildSurahList(context),
+                    _buildJuzList(context),
+                    _buildBookmarkList(context),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildSurahList(BuildContext context) {
-    final items = _filteredSurahNumbers();
-    if (items.isEmpty) {
-      return Center(
-        child: Text(
-          'Surah tidak ditemukan.',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-      );
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final surahNumber = items[index];
-        final place = quran.getPlaceOfRevelation(surahNumber);
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => SurahDetailPage(surahNumber: surahNumber),
-                ),
-              );
-            },
-            leading: Container(
-              width: 38,
-              height: 38,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                "$surahNumber",
-                style: TextStyle(
-                  color: Theme.of(context).primaryColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+    return BlocBuilder<SearchCubit, SearchState>(
+      builder: (context, state) {
+        if (state is SearchLoading) {
+          // This is handled above the TabBarView now
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        List<int> items = [];
+        if (state is SearchInitial) {
+          items = state.surahNumbers;
+        } else if (state is SearchLoaded) {
+          items = state.surahNumbers;
+        }
+
+        if (items.isEmpty) {
+          return Center(
+            child: Text(
+              'Surah tidak ditemukan.',
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
-            title: Text(
-              quran.getSurahName(surahNumber),
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              "${place[0].toUpperCase()}${place.substring(1)} • ${quran.getVerseCount(surahNumber)} ayat",
-              style: Theme.of(context).textTheme.labelMedium,
-            ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  quran.getSurahNameArabic(surahNumber),
-                  style: GoogleFonts.amiri(
-                    fontSize: 24,
-                    color: Theme.of(context).primaryColor,
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final surahNumber = items[index];
+            final place = quran.getPlaceOfRevelation(surahNumber);
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SurahDetailPage(surahNumber: surahNumber),
+                    ),
+                  );
+                },
+                leading: Container(
+                  width: 38,
+                  height: 38,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    "$surahNumber",
+                    style: TextStyle(
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ],
-            ),
-          ),
+                title: Text(
+                  quran.getSurahName(surahNumber),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  "${place[0].toUpperCase()}${place.substring(1)} • ${quran.getVerseCount(surahNumber)} ayat",
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      quran.getSurahNameArabic(surahNumber),
+                      style: GoogleFonts.amiri(
+                        fontSize: 24,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
   Widget _buildJuzList(BuildContext context) {
-    final normalized = _query.toLowerCase().trim();
+    final normalized = _searchController.text.toLowerCase().trim();
     final filtered = _juzStarts.where((start) {
       if (normalized.isEmpty) return true;
       final juz = _juzStarts.indexOf(start) + 1;
@@ -396,144 +282,146 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Widget _buildBookmarkList(BuildContext context) {
-    return FutureBuilder<_BookmarkData>(
-      future: _loadBookmarkData(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final data = snapshot.data;
-        final items = data?.bookmarks ?? [];
-        final folders = data?.folders ?? [];
-        final filtered = _showNotesOnly
-            ? items.where((item) => (item.note ?? '').isNotEmpty).toList()
-            : items;
-        final filteredByFolder = _selectedFolderId == null
-            ? filtered
-            : filtered
-                .where((item) => item.folderId == _selectedFolderId)
-                .toList();
-        if (filtered.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+    return BlocProvider(
+      create: (context) => getIt<BookmarkCubit>()..loadBookmarks(),
+      child: BlocBuilder<BookmarkCubit, BookmarkState>(
+        builder: (context, state) {
+          if (state is! BookmarkLoaded) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final items = state.filteredBookmarks;
+          final folders = state.allFolders;
+
+          if (items.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.bookmark_border, size: 48),
+                    const SizedBox(height: 12),
+                    Text(
+                      state.showNotesOnly
+                          ? 'Belum ada catatan'
+                          : 'Belum ada bookmark',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      state.showNotesOnly
+                          ? 'Tambahkan catatan pada ayat favorit.'
+                          : 'Tandai ayat favorit agar mudah diakses kembali.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            children: [
+              Row(
                 children: [
-                  const Icon(Icons.bookmark_border, size: 48),
-                  const SizedBox(height: 12),
                   Text(
-                    _showNotesOnly ? 'Belum ada catatan' : 'Belum ada bookmark',
+                    'Bookmark',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _showNotesOnly
-                        ? 'Tambahkan catatan pada ayat favorit.'
-                        : 'Tandai ayat favorit agar mudah diakses kembali.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () =>
+                        _showCreateFolderDialog(context.read<BookmarkCubit>()),
+                    icon:
+                        const Icon(Icons.create_new_folder_outlined, size: 18),
+                    label: const Text('Folder'),
+                  ),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('Favorit')),
+                      ButtonSegment(value: true, label: Text('Catatan')),
+                    ],
+                    selected: {state.showNotesOnly},
+                    onSelectionChanged: (_) => context
+                        .read<BookmarkCubit>()
+                        .toggleShowNotesOnly(),
                   ),
                 ],
               ),
-            ),
-          );
-        }
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Bookmark',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: _showCreateFolderDialog,
-                  icon: const Icon(Icons.create_new_folder_outlined, size: 18),
-                  label: const Text('Folder'),
-                ),
-                SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(value: false, label: Text('Favorit')),
-                    ButtonSegment(value: true, label: Text('Catatan')),
-                  ],
-                  selected: {_showNotesOnly},
-                  onSelectionChanged: (value) {
-                    setState(() => _showNotesOnly = value.first);
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (folders.isNotEmpty)
-              SizedBox(
-                height: 40,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: folders.length + 1,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
+              const SizedBox(height: 12),
+              if (folders.isNotEmpty)
+                SizedBox(
+                  height: 40,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: folders.length + 1,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return ChoiceChip(
+                          label: const Text('Semua'),
+                          selected: state.selectedFolderId == null,
+                          onSelected: (_) => context
+                              .read<BookmarkCubit>()
+                              .selectFolder(null),
+                        );
+                      }
+                      final folder = folders[index - 1];
                       return ChoiceChip(
-                        label: const Text('Semua'),
-                        selected: _selectedFolderId == null,
-                        onSelected: (_) =>
-                            setState(() => _selectedFolderId = null),
+                        label: Text(folder.name),
+                        selected: state.selectedFolderId == folder.id,
+                        onSelected: (_) => context
+                            .read<BookmarkCubit>()
+                            .selectFolder(folder.id),
                       );
-                    }
-                    final folder = folders[index - 1];
-                    return ChoiceChip(
-                      label: Text(folder.name),
-                      selected: _selectedFolderId == folder.id,
-                      onSelected: (_) =>
-                          setState(() => _selectedFolderId = folder.id),
-                    );
-                  },
-                ),
-              ),
-            if (folders.isNotEmpty) const SizedBox(height: 12),
-            ...filteredByFolder.map((item) {
-              final surahName = quran.getSurahName(item.surah);
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  title: Text('$surahName • Ayat ${item.ayah}'),
-                  subtitle: Text(
-                    item.note?.isNotEmpty == true
-                        ? item.note!
-                        : 'Tersimpan ${item.createdAt.toLocal().toString().split(' ').first}',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    },
                   ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => SurahDetailPage(
-                          surahNumber: item.surah,
-                          initialVerse: item.ayah,
-                        ),
-                      ),
-                    );
-                  },
                 ),
-              );
-            }),
-          ],
-        );
-      },
+              if (folders.isNotEmpty) const SizedBox(height: 12),
+              ...items.map((item) {
+                final surahName = quran.getSurahName(item.surah);
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    title: Text('$surahName • Ayat ${item.ayah}'),
+                    subtitle: Text(
+                      item.note?.isNotEmpty == true
+                          ? item.note!
+                          : 'Tersimpan ${item.createdAt.toLocal().toString().split(' ').first}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => SurahDetailPage(
+                            surahNumber: item.surah,
+                            initialVerse: item.ayah,
+                          ),
+                        ),
+                      ).then((_) => context.read<BookmarkCubit>().loadBookmarks());
+                    },
+                  ),
+                );
+              }),
+            ],
+          );
+        },
+      ),
     );
   }
 
-  void _showCreateFolderDialog() {
+  void _showCreateFolderDialog(BookmarkCubit cubit) {
     final controller = TextEditingController();
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Buat Folder'),
+        title: const Text('Buat Folder Baru'),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
@@ -549,27 +437,15 @@ class _QuranPageState extends State<QuranPage> {
             onPressed: () async {
               final name = controller.text.trim();
               if (name.isEmpty) return;
-              await BookmarkService.instance.addFolder(name);
-              if (context.mounted) {
+              await cubit.addFolder(name);
+              if (mounted) {
                 Navigator.pop(context);
-                setState(() {});
               }
             },
             child: const Text('Simpan'),
           ),
         ],
       ),
-    );
-  }
-
-  Future<_BookmarkData> _loadBookmarkData() async {
-    final results = await Future.wait([
-      BookmarkService.instance.getAll(),
-      BookmarkService.instance.getFolders(),
-    ]);
-    return _BookmarkData(
-      bookmarks: results[0] as List<BookmarkItem>,
-      folders: results[1] as List<BookmarkFolder>,
     );
   }
 }
