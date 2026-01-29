@@ -10,10 +10,17 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:quran/quran.dart' as quran;
+import 'package:quran_app/core/di/injection.dart';
+import 'package:quran_app/core/services/bookmark_service.dart';
+import 'package:quran_app/core/services/last_read_service.dart';
 import 'package:quran_app/core/services/translation_service.dart';
+import 'package:quran_app/core/services/word_by_word_service.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 import 'package:quran_app/core/settings/theme_settings.dart';
 import 'package:quran_app/features/quran/presentation/bloc/audio/quran_audio_cubit.dart';
+import 'package:quran_app/features/quran/presentation/bloc/audio/quran_audio_state.dart';
 import 'package:quran_app/features/quran/presentation/bloc/bookmark/bookmark_cubit.dart';
 import 'package:quran_app/features/quran/presentation/bloc/search/search_cubit.dart';
 import 'package:quran_app/features/quran/presentation/pages/tafsir_page.dart';
@@ -92,8 +99,13 @@ class _QuranPageState extends State<QuranPage> {
             ],
           ),
         ),
-        body: BlocProvider(
-          create: (context) => getIt<SearchCubit>(),
+        body: MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (context) => getIt<SearchCubit>()),
+            BlocProvider(
+              create: (context) => getIt<BookmarkCubit>()..loadBookmarks(),
+            ),
+          ],
           child: Column(
             children: [
               Padding(
@@ -102,6 +114,7 @@ class _QuranPageState extends State<QuranPage> {
                   controller: _searchController,
                   onChanged: (value) {
                     context.read<SearchCubit>().search(value);
+                    context.read<BookmarkCubit>().search(value);
                     setState(() {}); // To rebuild the Juz list
                   },
                   decoration: InputDecoration(
@@ -136,9 +149,9 @@ class _QuranPageState extends State<QuranPage> {
               Expanded(
                 child: TabBarView(
                   children: [
-                    _buildSurahList(context),
-                    _buildJuzList(context),
-                    _buildBookmarkList(context),
+                    _buildSurahList(),
+                    _buildJuzList(),
+                    _buildBookmarkList(),
                   ],
                 ),
               ),
@@ -149,11 +162,10 @@ class _QuranPageState extends State<QuranPage> {
     );
   }
 
-  Widget _buildSurahList(BuildContext context) {
+  Widget _buildSurahList() {
     return BlocBuilder<SearchCubit, SearchState>(
       builder: (context, state) {
         if (state is SearchLoading) {
-          // This is handled above the TabBarView now
           return const Center(child: CircularProgressIndicator());
         }
 
@@ -234,7 +246,7 @@ class _QuranPageState extends State<QuranPage> {
     );
   }
 
-  Widget _buildJuzList(BuildContext context) {
+  Widget _buildJuzList() {
     final normalized = _searchController.text.toLowerCase().trim();
     final filtered = _juzStarts.where((start) {
       if (normalized.isEmpty) return true;
@@ -275,138 +287,133 @@ class _QuranPageState extends State<QuranPage> {
     );
   }
 
-  Widget _buildBookmarkList(BuildContext context) {
-    return BlocProvider(
-      create: (context) => getIt<BookmarkCubit>()..loadBookmarks(),
-      child: BlocBuilder<BookmarkCubit, BookmarkState>(
-        builder: (context, state) {
-          if (state is! BookmarkLoaded) {
-            return const Center(child: CircularProgressIndicator());
-          }
+  Widget _buildBookmarkList() {
+    return BlocBuilder<BookmarkCubit, BookmarkState>(
+      builder: (context, state) {
+        if (state is! BookmarkLoaded) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          final items = state.filteredBookmarks;
-          final folders = state.allFolders;
+        final items = state.filteredBookmarks;
+        final folders = state.allFolders;
 
-          if (items.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.bookmark_border, size: 48),
-                    const SizedBox(height: 12),
-                    Text(
-                      state.showNotesOnly
-                          ? 'Belum ada catatan'
-                          : 'Belum ada bookmark',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      state.showNotesOnly
-                          ? 'Tambahkan catatan pada ayat favorit.'
-                          : 'Tandai ayat favorit agar mudah diakses kembali.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            children: [
-              Row(
+        if (items.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  const Icon(Icons.bookmark_border, size: 48),
+                  const SizedBox(height: 12),
                   Text(
-                    'Bookmark',
+                    state.showNotesOnly
+                        ? 'Belum ada catatan'
+                        : 'Belum ada bookmark',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  const Spacer(),
-                  TextButton.icon(
-                    onPressed: () =>
-                        _showCreateFolderDialog(context.read<BookmarkCubit>()),
-                    icon:
-                        const Icon(Icons.create_new_folder_outlined, size: 18),
-                    label: const Text('Folder'),
-                  ),
-                  SegmentedButton<bool>(
-                    segments: const [
-                      ButtonSegment(value: false, label: Text('Favorit')),
-                      ButtonSegment(value: true, label: Text('Catatan')),
-                    ],
-                    selected: {state.showNotesOnly},
-                    onSelectionChanged: (_) => context
-                        .read<BookmarkCubit>()
-                        .toggleShowNotesOnly(),
+                  const SizedBox(height: 6),
+                  Text(
+                    state.showNotesOnly
+                        ? 'Tambahkan catatan pada ayat favorit.'
+                        : 'Tandai ayat favorit agar mudah diakses kembali.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              if (folders.isNotEmpty)
-                SizedBox(
-                  height: 40,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: folders.length + 1,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return ChoiceChip(
-                          label: const Text('Semua'),
-                          selected: state.selectedFolderId == null,
-                          onSelected: (_) => context
-                              .read<BookmarkCubit>()
-                              .selectFolder(null),
-                        );
-                      }
-                      final folder = folders[index - 1];
-                      return ChoiceChip(
-                        label: Text(folder.name),
-                        selected: state.selectedFolderId == folder.id,
-                        onSelected: (_) => context
-                            .read<BookmarkCubit>()
-                            .selectFolder(folder.id),
-                      );
-                    },
-                  ),
-                ),
-              if (folders.isNotEmpty) const SizedBox(height: 12),
-              ...items.map((item) {
-                final surahName = quran.getSurahName(item.surah);
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    title: Text('$surahName • Ayat ${item.ayah}'),
-                    subtitle: Text(
-                      item.note?.isNotEmpty == true
-                          ? item.note!
-                          : 'Tersimpan ${item.createdAt.toLocal().toString().split(' ').first}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => SurahDetailPage(
-                            surahNumber: item.surah,
-                            initialVerse: item.ayah,
-                          ),
-                        ),
-                      ).then((_) => context.read<BookmarkCubit>().loadBookmarks());
-                    },
-                  ),
-                );
-              }),
-            ],
+            ),
           );
-        },
-      ),
+        }
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Bookmark',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () =>
+                      _showCreateFolderDialog(context.read<BookmarkCubit>()),
+                  icon:
+                      const Icon(Icons.create_new_folder_outlined, size: 18),
+                  label: const Text('Folder'),
+                ),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(value: false, label: Text('Favorit')),
+                    ButtonSegment(value: true, label: Text('Catatan')),
+                  ],
+                  selected: {state.showNotesOnly},
+                  onSelectionChanged: (_) =>
+                      context.read<BookmarkCubit>().toggleShowNotesOnly(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (folders.isNotEmpty)
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: folders.length + 1,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return ChoiceChip(
+                        label: const Text('Semua'),
+                        selected: state.selectedFolderId == null,
+                        onSelected: (_) =>
+                            context.read<BookmarkCubit>().selectFolder(null),
+                      );
+                    }
+                    final folder = folders[index - 1];
+                    return ChoiceChip(
+                      label: Text(folder.name),
+                      selected: state.selectedFolderId == folder.id,
+                      onSelected: (_) => context
+                          .read<BookmarkCubit>()
+                          .selectFolder(folder.id),
+                    );
+                  },
+                ),
+              ),
+            if (folders.isNotEmpty) const SizedBox(height: 12),
+            ...items.map((item) {
+              final surahName = quran.getSurahName(item.surah);
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  title: Text('$surahName • Ayat ${item.ayah}'),
+                  subtitle: Text(
+                    item.note?.isNotEmpty == true
+                        ? item.note!
+                        : 'Tersimpan ${item.createdAt.toLocal().toString().split(' ').first}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SurahDetailPage(
+                          surahNumber: item.surah,
+                          initialVerse: item.ayah,
+                        ),
+                      ),
+                    ).then((_) => context.read<BookmarkCubit>().loadBookmarks());
+                  },
+                ),
+              );
+            }),
+          ],
+        );
+      },
     );
   }
 
@@ -457,15 +464,20 @@ class SurahDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => getIt<QuranAudioCubit>()
-        ..loadSurah(surahNumber, initialVerse: initialVerse),
-      child: const _SurahDetailView(),
+      create: (context) =>
+          getIt<QuranAudioCubit>()..loadSurah(surahNumber, initialVerse),
+      child: _SurahDetailView(
+        surahNumber: surahNumber,
+        initialVerse: initialVerse,
+      ),
     );
   }
 }
 
 class _SurahDetailView extends StatefulWidget {
-  const _SurahDetailView();
+  final int surahNumber;
+  final int? initialVerse;
+  const _SurahDetailView({required this.surahNumber, this.initialVerse});
 
   @override
   State<_SurahDetailView> createState() => _SurahDetailPageState();
@@ -487,11 +499,10 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
   @override
   void initState() {
     super.initState();
-    final cubit = context.read<QuranAudioCubit>();
     _scrollController = ScrollController(
-      initialScrollOffset: _estimateScrollOffset(cubit.initialVerse),
+      initialScrollOffset: _estimateScrollOffset(widget.initialVerse),
     );
-    _highlightVerse = cubit.initialVerse;
+    _highlightVerse = widget.initialVerse;
 
     _quranSettings.addListener(_onSettingsChanged);
     _themeSettings.addListener(_onSettingsChanged);
@@ -690,18 +701,6 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     );
   }
 
-  Future<void> _refreshDownloadStatus() async {
-    final downloaded = await getIt<AudioCacheService>().isSurahDownloaded(
-      widget.surahNumber,
-      _audioSettings.value.qariId,
-    );
-    if (mounted) {
-      setState(() {
-        _isDownloaded = downloaded;
-      });
-    }
-  }
-
   Future<void> _loadBookmarks() async {
     final keys = await BookmarkService.instance.getKeys();
     if (!mounted) return;
@@ -724,9 +723,13 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     final source = _quranSettings.value.translation;
     final needsAsset = TranslationAssetService.instance.requiresAsset(source);
     if (!needsAsset) {
-      _customTranslationMap = null;
-      _customTranslationSource = null;
-      _isTranslationLoading = false;
+      if (mounted) {
+        setState(() {
+          _customTranslationMap = null;
+          _customTranslationSource = null;
+          _isTranslationLoading = false;
+        });
+      }
       return;
     }
     if (_customTranslationSource == source && _customTranslationMap != null) {
@@ -743,35 +746,6 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     }
   }
 
-  Future<void> _toggleDownload() async {
-    if (_isDownloading) return;
-    setState(() => _isDownloading = true);
-    try {
-      if (_isDownloaded) {
-        await getIt<AudioCacheService>().deleteSurah(
-          widget.surahNumber,
-          _audioSettings.value.qariId,
-        );
-      } else {
-        await getIt<AudioCacheService>().downloadSurah(
-          widget.surahNumber,
-          _audioSettings.value.qariId,
-        );
-      }
-      await _refreshDownloadStatus();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal mengunduh audio: $e")),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isDownloading = false);
-      }
-    }
-  }
-
   void _showDisplaySettingsSheet() {
     showModalBottomSheet(
       context: context,
@@ -781,9 +755,6 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
       },
     );
   }
-
-  // Helper getters for old usage (if any remain)
-
 
   void _showReaderMoreSheet(
     BuildContext context,
@@ -852,7 +823,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                 title: const Text('Info surah'),
                 onTap: () {
                   Navigator.pop(context);
-                  _showSurahInfo(cubit.surahNumber);
+                  _showSurahInfo();
                 },
               ),
             ],
@@ -862,23 +833,22 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     );
   }
 
-  void _showSurahInfo(int surahNumber) {
-    final name = quran.getSurahName(surahNumber);
-    final arabic = quran.getSurahNameArabic(surahNumber);
-    final place = quran.getPlaceOfRevelation(surahNumber);
-    final verses = quran.getVerseCount(surahNumber);
+  void _showSurahInfo() {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(name),
+        title: Text(quran.getSurahName(widget.surahNumber)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(arabic, style: GoogleFonts.amiri(fontSize: 24)),
+            Text(
+              quran.getSurahNameArabic(widget.surahNumber),
+              style: GoogleFonts.amiri(fontSize: 24),
+            ),
             const SizedBox(height: 8),
             Text(
-              '${place[0].toUpperCase()}${place.substring(1)} • $verses ayat',
+              '${quran.getPlaceOfRevelation(widget.surahNumber)[0].toUpperCase()}${quran.getPlaceOfRevelation(widget.surahNumber).substring(1)} • ${quran.getVerseCount(widget.surahNumber)} ayat',
             ),
           ],
         ),
@@ -896,9 +866,9 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.08),
+        color: Colors.grey.withAlpha(20),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.grey.withAlpha(51)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -954,7 +924,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
             color: Theme.of(context).cardTheme.color ?? Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
+                color: Colors.black.withAlpha(20),
                 blurRadius: 12,
                 offset: const Offset(0, -4),
               ),
@@ -975,12 +945,12 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
               ),
               if (state.isAyahMode) ...[
                 IconButton(
-                  onPressed: cubit.playPrevious,
+                  onPressed: cubit.playPreviousVerse,
                   icon: const Icon(Icons.skip_previous),
                   tooltip: 'Ayat sebelumnya',
                 ),
                 IconButton(
-                  onPressed: cubit.playNext,
+                  onPressed: cubit.playNextVerse,
                   icon: const Icon(Icons.skip_next),
                   tooltip: 'Ayat berikutnya',
                 ),
@@ -988,13 +958,12 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
               IconButton(
                 onPressed: cubit.toggleRepeat,
                 icon: Icon(
-                  state.isRepeatActive ? Icons.repeat_one : Icons.repeat,
-                  color: state.isRepeatActive
-                      ? Theme.of(context).primaryColor
-                      : null,
+                  state.isRepeatOne ? Icons.repeat_one : Icons.repeat,
+                  color:
+                      state.isRepeatOne ? Theme.of(context).primaryColor : null,
                 ),
                 tooltip:
-                    state.isRepeatActive ? 'Repeat ayat aktif' : 'Repeat ayat',
+                    state.isRepeatOne ? 'Ulangi ayat' : 'Jangan ulangi ayat',
               ),
               PopupMenuButton<double>(
                 onSelected: cubit.setPlaybackSpeed,
@@ -1009,7 +978,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                    color: Theme.of(context).primaryColor.withAlpha(26),
                   ),
                   child: Text(
                     '${state.playbackSpeed.toStringAsFixed(2).replaceAll('.00', '')}x',
@@ -1019,7 +988,8 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
               ),
               const SizedBox(width: 8),
               IconButton(
-                onPressed: state.status == PlayerStatus.loading ? null : cubit.playPause,
+                onPressed:
+                    state.status == PlayerStatus.loading ? null : cubit.playPause,
                 icon: Icon(
                   state.status == PlayerStatus.playing
                       ? Icons.pause
@@ -1048,11 +1018,11 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
           currentAyah: state.currentVerse,
           isPlaying: state.status == PlayerStatus.playing,
           isLoading: state.status == PlayerStatus.loading,
-          repeatOne: state.isRepeatActive,
+          repeatOne: state.isRepeatOne,
           speed: state.playbackSpeed,
           onPlayPause: cubit.playPause,
-          onNextAyah: state.isAyahMode ? cubit.playNext : null,
-          onPrevAyah: state.isAyahMode ? cubit.playPrevious : null,
+          onNextAyah: state.isAyahMode ? cubit.playNextVerse : null,
+          onPrevAyah: state.isAyahMode ? cubit.playPreviousVerse : null,
           onToggleRepeat: cubit.toggleRepeat,
           onSpeedChanged: cubit.setPlaybackSpeed,
         );
@@ -1068,7 +1038,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
   }) async {
     context.read<QuranAudioCubit>().setHighlight(verseNumber);
     await LastReadService.instance.save(
-      surah: context.read<QuranAudioCubit>().surahNumber,
+      surah: widget.surahNumber,
       ayah: verseNumber,
     );
     if (mounted) {
@@ -1088,6 +1058,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     required String translation,
     required String transliteration,
   }) {
+    final cubit = context.read<QuranAudioCubit>();
     final isSaved = _isBookmarked(verseNumber);
     showModalBottomSheet(
       context: context,
@@ -1101,7 +1072,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                 title: const Text('Putar audio ayat'),
                 onTap: () {
                   Navigator.pop(context);
-                  _playVerseAudio(verseNumber);
+                  cubit.playVerse(widget.surahNumber, verseNumber);
                 },
               ),
               ListTile(
@@ -1138,7 +1109,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                   if (!mounted) return;
                   navigator.pop();
                   messenger.showSnackBar(
-                      const SnackBar(content: Text('Teks Arab disalin.')),
+                    const SnackBar(content: Text('Teks Arab disalin.')),
                   );
                 },
               ),
@@ -1152,7 +1123,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                   if (!mounted) return;
                   navigator.pop();
                   messenger.showSnackBar(
-                      const SnackBar(content: Text('Terjemahan disalin.')),
+                    const SnackBar(content: Text('Terjemahan disalin.')),
                   );
                 },
               ),
@@ -1169,9 +1140,9 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                     if (!mounted) return;
                     navigator.pop();
                     messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Transliterasi disalin.'),
-                        ),
+                      const SnackBar(
+                        content: Text('Transliterasi disalin.'),
+                      ),
                     );
                   },
                 ),
@@ -1418,9 +1389,9 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
       width: 320,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.08),
+        color: theme.colorScheme.primary.withAlpha(20),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.grey.withAlpha(51)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1627,28 +1598,28 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
             children: [
               // Basmalah Header
               if (surahNumber != 1 && surahNumber != 9)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: Container(
-                  width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Center(
-                    child: Text(
-                      "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
-                      style: _arabicTextStyle(
-                        _quranSettings.value,
-                        Theme.of(context),
-                      ).copyWith(fontSize: 24),
-                      textAlign: TextAlign.center,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withAlpha(20),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Center(
+                      child: Text(
+                        "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+                        style: _arabicTextStyle(
+                          _quranSettings.value,
+                          Theme.of(context),
+                        ).copyWith(fontSize: 24),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
                 ),
-              ),
               Expanded(
                 child: ListView.builder(
                   controller: _scrollController,
@@ -1675,7 +1646,8 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                                 _translationType(settings.translation),
                                 verseKey,
                               ).text;
-                    final translationText = _sanitizeTranslation(rawTranslation);
+                    final translationText =
+                        _sanitizeTranslation(rawTranslation);
                     final transliterationText = settings.showLatin
                         ? _decodeHtml(AlQuran.transliteration(verseKey).text)
                         : '';
@@ -1693,13 +1665,11 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                         ),
                         decoration: BoxDecoration(
                           color: _highlightVerse == verseNumber
-                              ? Theme.of(context)
-                                  .primaryColor
-                                  .withValues(alpha: 0.08)
+                              ? Theme.of(context).primaryColor.withAlpha(20)
                               : null,
                           border: Border(
                             bottom: BorderSide(
-                              color: Colors.grey.withValues(alpha: 0.1),
+                              color: Colors.grey.withAlpha(26),
                             ),
                           ),
                         ),
@@ -1707,7 +1677,8 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -1717,15 +1688,17 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                                   decoration: BoxDecoration(
                                     color: Theme.of(
                                       context,
-                                    ).primaryColor.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(12),
+                                    ).primaryColor.withAlpha(26),
+                                    borderRadius:
+                                        BorderRadius.circular(12),
                                   ),
                                   child: Row(
                                     children: [
                                       Text(
                                         "Ayat $verseNumber",
                                         style: TextStyle(
-                                          color: Theme.of(context).primaryColor,
+                                          color:
+                                              Theme.of(context).primaryColor,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 12,
                                         ),
@@ -1740,7 +1713,8 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                                         verseNumber: verseNumber,
                                         arabic: verseText,
                                         translation: translationText,
-                                        transliteration: transliterationText,
+                                        transliteration:
+                                            transliterationText,
                                       ),
                                       icon: Icon(
                                         Icons.share_outlined,
@@ -1783,7 +1757,8 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                                       12,
                                       settings.translationFontSize - 2,
                                     ),
-                                    height: settings.translationLineHeight,
+                                    height:
+                                        settings.translationLineHeight,
                                     color: Colors.grey[600],
                                   ),
                                 ),
@@ -1825,5 +1800,6 @@ class _JuzStart {
 
   const _JuzStart(this.surah, this.ayah);
 }
+
 
 
