@@ -114,7 +114,6 @@ class _QuranPageState extends State<QuranPage> {
                   controller: _searchController,
                   onChanged: (value) {
                     context.read<SearchCubit>().search(value);
-                    context.read<BookmarkCubit>().search(value);
                     setState(() {}); // To rebuild the Juz list
                   },
                   decoration: InputDecoration(
@@ -465,7 +464,7 @@ class SurahDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) =>
-          getIt<QuranAudioCubit>()..loadSurah(surahNumber, initialVerse),
+          getIt<QuranAudioCubit>()..loadSurah(surahNumber: surahNumber, initialVerse: initialVerse),
       child: _SurahDetailView(
         surahNumber: surahNumber,
         initialVerse: initialVerse,
@@ -764,48 +763,61 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     showModalBottomSheet(
       context: context,
       builder: (context) {
-        final currentVerse = state.currentVerse ?? _highlightVerse ?? 1;
+        int? currentVerse;
+        DownloadStatus? downloadStatus;
+
+        if (state is QuranAudioPlaying) {
+          currentVerse = state.currentAyah;
+          downloadStatus = state.downloadStatus;
+        } else if (state is QuranAudioPaused) {
+          currentVerse = state.currentAyah;
+          downloadStatus = state.downloadStatus;
+        }
+
+        final verseForBookmark = currentVerse ?? _highlightVerse ?? 1;
+
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                leading: state.downloadStatus == DownloadStatus.downloading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        state.downloadStatus == DownloadStatus.downloaded
-                            ? Icons.check_circle
-                            : Icons.download,
-                      ),
-                title: Text(
-                  state.downloadStatus == DownloadStatus.downloaded
-                      ? 'Hapus audio offline'
-                      : 'Unduh audio offline',
+              if (downloadStatus != null)
+                ListTile(
+                  leading: downloadStatus == DownloadStatus.downloading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          downloadStatus == DownloadStatus.downloaded
+                              ? Icons.check_circle
+                              : Icons.download,
+                        ),
+                  title: Text(
+                    downloadStatus == DownloadStatus.downloaded
+                        ? 'Hapus audio offline'
+                        : 'Unduh audio offline',
+                  ),
+                  onTap: downloadStatus == DownloadStatus.downloading
+                      ? null
+                      : () async {
+                          Navigator.pop(context);
+                          await cubit.toggleDownload();
+                        },
                 ),
-                onTap: state.downloadStatus == DownloadStatus.downloading
-                    ? null
-                    : () async {
-                        Navigator.pop(context);
-                        await cubit.toggleDownload();
-                      },
-              ),
               ListTile(
                 leading: const Icon(Icons.bookmark_border),
                 title: Text(
-                  _isBookmarked(currentVerse)
+                  _isBookmarked(verseForBookmark)
                       ? 'Hapus bookmark'
                       : 'Simpan bookmark',
                 ),
                 onTap: () async {
                   final navigator = Navigator.of(context);
                   final messenger = ScaffoldMessenger.of(context);
-                  final wasBookmarked = _isBookmarked(currentVerse);
+                  final wasBookmarked = _isBookmarked(verseForBookmark);
                   navigator.pop();
-                  await _toggleBookmark(currentVerse);
+                  await _toggleBookmark(verseForBookmark);
                   if (!mounted) return;
                   messenger.showSnackBar(
                     SnackBar(
@@ -914,6 +926,16 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     QuranAudioState state,
     QuranAudioCubit cubit,
   ) {
+    if (state is! QuranAudioPlaying && state is! QuranAudioPaused) {
+      return const SizedBox.shrink();
+    }
+
+    final isPlaying = state is QuranAudioPlaying;
+    final surahNumber = isPlaying ? state.surahNumber : (state as QuranAudioPaused).surahNumber;
+    final currentVerse = isPlaying ? state.currentAyah : (state as QuranAudioPaused).currentAyah;
+    final isAyahMode = isPlaying ? state.isAyahMode : (state as QuranAudioPaused).isAyahMode;
+    final isRepeatOne = isPlaying ? state.isRepeatOne : (state as QuranAudioPaused).isRepeatOne;
+
     return Material(
       color: Theme.of(context).cardTheme.color ?? Colors.white,
       child: InkWell(
@@ -936,14 +958,14 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  state.isAyahMode
-                      ? 'Ayat ${state.currentVerse!} • ${quran.getSurahName(cubit.surahNumber)}'
-                      : 'Murotal ${quran.getSurahName(cubit.surahNumber)}',
+                  isAyahMode
+                      ? 'Ayat $currentVerse • ${quran.getSurahName(surahNumber)}'
+                      : 'Murotal ${quran.getSurahName(surahNumber)}',
                   style: Theme.of(context).textTheme.bodyMedium,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (state.isAyahMode) ...[
+              if (isAyahMode) ...[
                 IconButton(
                   onPressed: cubit.playPreviousVerse,
                   icon: const Icon(Icons.skip_previous),
@@ -958,12 +980,12 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
               IconButton(
                 onPressed: cubit.toggleRepeat,
                 icon: Icon(
-                  state.isRepeatOne ? Icons.repeat_one : Icons.repeat,
+                  isRepeatOne ? Icons.repeat_one : Icons.repeat,
                   color:
-                      state.isRepeatOne ? Theme.of(context).primaryColor : null,
+                      isRepeatOne ? Theme.of(context).primaryColor : null,
                 ),
                 tooltip:
-                    state.isRepeatOne ? 'Ulangi ayat' : 'Jangan ulangi ayat',
+                    isRepeatOne ? 'Ulangi ayat' : 'Jangan ulangi ayat',
               ),
               PopupMenuButton<double>(
                 onSelected: cubit.setPlaybackSpeed,
@@ -981,17 +1003,16 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                     color: Theme.of(context).primaryColor.withAlpha(26),
                   ),
                   child: Text(
-                    '${state.playbackSpeed.toStringAsFixed(2).replaceAll('.00', '')}x',
+                    '${_quranSettings.value.playbackSpeed.toStringAsFixed(2).replaceAll('.00', '')}x',
                     style: TextStyle(color: Theme.of(context).primaryColor),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               IconButton(
-                onPressed:
-                    state.status == PlayerStatus.loading ? null : cubit.playPause,
+                onPressed: cubit.playPause,
                 icon: Icon(
-                  state.status == PlayerStatus.playing
+                  isPlaying
                       ? Icons.pause
                       : Icons.play_arrow,
                 ),
@@ -1012,19 +1033,9 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return QuranAudioPlayerSheet(
-          surahNumber: cubit.surahNumber,
-          isAyahMode: state.isAyahMode,
-          currentAyah: state.currentVerse,
-          isPlaying: state.status == PlayerStatus.playing,
-          isLoading: state.status == PlayerStatus.loading,
-          repeatOne: state.isRepeatOne,
-          speed: state.playbackSpeed,
-          onPlayPause: cubit.playPause,
-          onNextAyah: state.isAyahMode ? cubit.playNextVerse : null,
-          onPrevAyah: state.isAyahMode ? cubit.playPreviousVerse : null,
-          onToggleRepeat: cubit.toggleRepeat,
-          onSpeedChanged: cubit.setPlaybackSpeed,
+        return BlocProvider.value(
+          value: cubit,
+          child: const QuranAudioPlayerSheet(),
         );
       },
     );
@@ -1036,20 +1047,19 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     required String translation,
     required String transliteration,
   }) async {
-    context.read<QuranAudioCubit>().setHighlight(verseNumber);
+    setState(() => _highlightVerse = verseNumber);
     await LastReadService.instance.save(
       surah: widget.surahNumber,
       ayah: verseNumber,
     );
     if (mounted) {
-      setState(() => _highlightVerse = verseNumber);
+      _showVerseActionSheet(
+        verseNumber: verseNumber,
+        arabic: arabic,
+        translation: translation,
+        transliteration: transliteration,
+      );
     }
-    _showVerseActionSheet(
-      verseNumber: verseNumber,
-      arabic: arabic,
-      translation: translation,
-      transliteration: transliteration,
-    );
   }
 
   void _showVerseActionSheet({
@@ -1509,22 +1519,24 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
   Widget build(BuildContext context) {
     return BlocConsumer<QuranAudioCubit, QuranAudioState>(
       listener: (context, state) {
-        if (state.highlightVerse != null &&
-            state.highlightVerse != _highlightVerse) {
+        if (state is QuranAudioPlaying && state.currentAyah != _highlightVerse) {
           setState(() {
-            _highlightVerse = state.highlightVerse;
+            _highlightVerse = state.currentAyah;
+          });
+        } else if (state is QuranAudioPaused && state.currentAyah != _highlightVerse) {
+           setState(() {
+            _highlightVerse = state.currentAyah;
           });
         }
-        if (state.error != null) {
+        if (state is QuranAudioError) {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(state.error!)));
+            ..showSnackBar(SnackBar(content: Text(state.message)));
         }
       },
       builder: (context, state) {
         final cubit = context.read<QuranAudioCubit>();
-        final surahNumber = cubit.surahNumber;
-        final int verseCount = quran.getVerseCount(surahNumber);
+        final int verseCount = quran.getVerseCount(widget.surahNumber);
         final settings = _quranSettings.value;
         final needsCustomTranslation =
             TranslationAssetService.instance.requiresAsset(settings.translation);
@@ -1532,17 +1544,23 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
         if (needsCustomTranslation &&
             (_customTranslationMap == null || _isTranslationLoading)) {
           return Scaffold(
-            appBar: AppBar(title: Text(quran.getSurahName(surahNumber))),
+            appBar: AppBar(title: Text(quran.getSurahName(widget.surahNumber))),
             body: const Center(child: CircularProgressIndicator()),
           );
         }
 
-        final currentVerse = state.currentVerse ?? _highlightVerse ?? 1;
-        final isBookmarked = _isBookmarked(currentVerse);
+        int? currentVerse;
+        if (state is QuranAudioPlaying) {
+          currentVerse = state.currentAyah;
+        } else if (state is QuranAudioPaused) {
+          currentVerse = state.currentAyah;
+        }
+
+        final isBookmarked = _isBookmarked(currentVerse ?? _highlightVerse ?? 1);
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(quran.getSurahName(surahNumber)),
+            title: Text(quran.getSurahName(widget.surahNumber)),
             actions: [
               IconButton(
                 onPressed: _showDisplaySettingsSheet,
@@ -1550,16 +1568,15 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                 tooltip: "Tampilan",
               ),
               IconButton(
-                onPressed:
-                    state.status == PlayerStatus.loading ? null : cubit.playPause,
-                icon: state.status == PlayerStatus.loading
+                onPressed: cubit.playPause,
+                icon: (state is QuranAudioLoading)
                     ? const SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : Icon(
-                        state.status == PlayerStatus.playing
+                        (state is QuranAudioPlaying)
                             ? Icons.pause
                             : Icons.play_arrow,
                       ),
@@ -1568,8 +1585,9 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
               IconButton(
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
-                  final wasBookmarked = isBookmarked;
-                  await _toggleBookmark(currentVerse);
+                  final verseToBookmark = currentVerse ?? _highlightVerse ?? 1;
+                  final wasBookmarked = _isBookmarked(verseToBookmark);
+                  await _toggleBookmark(verseToBookmark);
                   if (!mounted) return;
                   messenger.showSnackBar(
                     SnackBar(
@@ -1593,11 +1611,11 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
               ),
             ],
           ),
-          bottomNavigationBar: state.showPlayer ? _buildMiniPlayer(context, state, cubit) : null,
+          bottomNavigationBar: (state is QuranAudioPlaying || state is QuranAudioPaused) ? _buildMiniPlayer(context, state, cubit) : null,
           body: Column(
             children: [
               // Basmalah Header
-              if (surahNumber != 1 && surahNumber != 9)
+              if (widget.surahNumber != 1 && widget.surahNumber != 9)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                   child: Container(
@@ -1626,9 +1644,9 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                   itemCount: verseCount,
                   itemBuilder: (context, index) {
                     final verseNumber = index + 1;
-                    final verseKey = "$surahNumber:$verseNumber";
+                    final verseKey = "${widget.surahNumber}:$verseNumber";
                     final verseText = AlQuran.verse(
-                      surahNumber,
+                      widget.surahNumber,
                       verseNumber,
                       mode: settings.showTajwid
                           ? VerseMode.uthmaniTajweed
@@ -1638,7 +1656,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                         ? (_customTranslationMap?[verseKey] ?? '')
                         : settings.translation == TranslationSource.enSaheeh
                             ? quran.getVerseTranslation(
-                                surahNumber,
+                                widget.surahNumber,
                                 verseNumber,
                                 translation: quran.Translation.enSaheeh,
                               )
