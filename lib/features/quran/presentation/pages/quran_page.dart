@@ -397,8 +397,8 @@ class _QuranPageState extends State<QuranPage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
+                  onTap: () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => SurahDetailPage(
@@ -406,7 +406,9 @@ class _QuranPageState extends State<QuranPage> {
                           initialVerse: item.ayah,
                         ),
                       ),
-                    ).then((_) => context.read<BookmarkCubit>().loadBookmarks());
+                    );
+                    if (!context.mounted) return;
+                    context.read<BookmarkCubit>().loadBookmarks();
                   },
                 ),
               );

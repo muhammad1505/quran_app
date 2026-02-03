@@ -183,9 +183,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -228,7 +233,8 @@ class HomePage extends StatelessWidget {
                   const SizedBox(height: 16),
                   _buildContinueReadingCard(context, state.lastRead),
                   const SizedBox(height: 20),
-                  Text("Aksi Cepat", style: Theme.of(context).textTheme.titleMedium),
+                  Text("Aksi Cepat",
+                      style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 12),
                   GridView.count(
                     shrinkWrap: true,
@@ -242,11 +248,13 @@ class HomePage extends StatelessWidget {
                           MaterialPageRoute(builder: (_) => const QuranPage()),
                         );
                       }),
-                      _buildMenuIcon(context, Icons.access_time_filled, "Jadwal", () {
+                      _buildMenuIcon(
+                          context, Icons.access_time_filled, "Jadwal", () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const Scaffold(body: PrayerTimesPage()),
+                            builder: (_) =>
+                                const Scaffold(body: PrayerTimesPage()),
                           ),
                         );
                       }),
@@ -256,7 +264,8 @@ class HomePage extends StatelessWidget {
                           MaterialPageRoute(builder: (_) => const QiblaPage()),
                         );
                       }),
-                      _buildMenuIcon(context, Icons.volunteer_activism, "Doa", () {
+                      _buildMenuIcon(
+                          context, Icons.volunteer_activism, "Doa", () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const DoaPage()),
@@ -265,19 +274,22 @@ class HomePage extends StatelessWidget {
                       _buildMenuIcon(context, Icons.mosque, "Sholat", () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const PrayerGuidePage()),
+                          MaterialPageRoute(
+                              builder: (_) => const PrayerGuidePage()),
                         );
                       }),
                       _buildMenuIcon(context, Icons.auto_awesome, "Asmaul", () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const AsmaulHusnaPage()),
+                          MaterialPageRoute(
+                              builder: (_) => const AsmaulHusnaPage()),
                         );
                       }),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  Text("Hari Ini", style: Theme.of(context).textTheme.titleMedium),
+                  Text("Hari Ini",
+                      style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 12),
                   _buildDailyHighlightCard(context, state),
                 ],
@@ -321,10 +333,8 @@ class HomePage extends StatelessWidget {
 
   Widget _buildContinueReadingCard(BuildContext context, LastRead? lastRead) {
     final hasLastRead = lastRead != null;
-    final surahName =
-        hasLastRead ? quran.getSurahName(lastRead.surah) : '';
-    final totalVerses =
-        hasLastRead ? quran.getVerseCount(lastRead.surah) : 0;
+    final surahName = hasLastRead ? quran.getSurahName(lastRead.surah) : '';
+    final totalVerses = hasLastRead ? quran.getVerseCount(lastRead.surah) : 0;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -361,15 +371,17 @@ class HomePage extends StatelessWidget {
               ),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 if (!hasLastRead) {
-                  Navigator.push(
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const QuranPage()),
-                  ).then((_) => context.read<HomeCubit>().refreshLastRead());
+                  );
+                  if (!mounted) return;
+                  context.read<HomeCubit>().refreshLastRead();
                   return;
                 }
-                Navigator.push(
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => SurahDetailPage(
@@ -377,7 +389,9 @@ class HomePage extends StatelessWidget {
                       initialVerse: lastRead.ayah,
                     ),
                   ),
-                ).then((_) => context.read<HomeCubit>().refreshLastRead());
+                );
+                if (!mounted) return;
+                context.read<HomeCubit>().refreshLastRead();
               },
               child: const Text("Lanjut"),
             ),
@@ -393,11 +407,11 @@ class HomePage extends StatelessWidget {
     final isBookmarked =
         verse != null && state.bookmarkKeys.contains('${verse.surah}:${verse.ayah}');
 
-    _toggleDailyVerseBookmark(DailyVerse verse) async {
+    toggleDailyVerseBookmark(DailyVerse verse) async {
       final messenger = ScaffoldMessenger.of(context);
       final wasBookmarked = isBookmarked;
       await context.read<HomeCubit>().toggleDailyVerseBookmark(verse);
-      if (!context.mounted) return;
+      if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
           content: Text(
@@ -406,7 +420,7 @@ class HomePage extends StatelessWidget {
         ),
       );
     }
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -450,9 +464,8 @@ class HomePage extends StatelessWidget {
             Row(
               children: [
                 TextButton.icon(
-                  onPressed: verse == null
-                      ? null
-                      : () => _toggleDailyVerseBookmark(verse),
+                  onPressed:
+                      verse == null ? null : () => toggleDailyVerseBookmark(verse),
                   icon: Icon(
                     isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                     size: 18,

@@ -48,7 +48,7 @@ class QuranAudioPlayerSheet extends StatelessWidget {
         }
 
         if (isAyahMode && currentAyah != null) {
-          title = 'Ayat ${currentAyah} • ${quran.getSurahName(surahNumber)}';
+          title = 'Ayat $currentAyah • ${quran.getSurahName(surahNumber)}';
         } else {
           title = 'Murotal ${quran.getSurahName(surahNumber)}';
         }
