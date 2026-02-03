@@ -372,17 +372,17 @@ class _HomePageState extends State<HomePage> {
             ),
             TextButton(
               onPressed: () async {
+                final cubit = context.read<HomeCubit>();
+                final navigator = Navigator.of(context);
                 if (!hasLastRead) {
-                  await Navigator.push(
-                    context,
+                  await navigator.push(
                     MaterialPageRoute(builder: (_) => const QuranPage()),
                   );
                   if (!mounted) return;
-                  context.read<HomeCubit>().refreshLastRead();
+                  cubit.refreshLastRead();
                   return;
                 }
-                await Navigator.push(
-                  context,
+                await navigator.push(
                   MaterialPageRoute(
                     builder: (_) => SurahDetailPage(
                       surahNumber: lastRead.surah,
@@ -391,7 +391,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 );
                 if (!mounted) return;
-                context.read<HomeCubit>().refreshLastRead();
+                cubit.refreshLastRead();
               },
               child: const Text("Lanjut"),
             ),
@@ -408,10 +408,12 @@ class _HomePageState extends State<HomePage> {
         verse != null && state.bookmarkKeys.contains('${verse.surah}:${verse.ayah}');
 
     void toggleDailyVerseBookmark(DailyVerse verse) async {
+      final cubit = context.read<HomeCubit>();
+      final messenger = ScaffoldMessenger.of(context);
       final wasBookmarked = isBookmarked;
-      await context.read<HomeCubit>().toggleDailyVerseBookmark(verse);
+      await cubit.toggleDailyVerseBookmark(verse);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             wasBookmarked ? 'Bookmark dihapus.' : 'Bookmark disimpan.',

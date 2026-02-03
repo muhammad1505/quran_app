@@ -1387,7 +1387,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                   subject:
                       'Surah ${quran.getSurahName(widget.surahNumber)} ayat $verseNumber',
                 );
-                if (!mounted) return;
+                if (!navigator.mounted) return;
                 navigator.pop();
               },
               child: const Text('Bagikan'),
@@ -1466,6 +1466,9 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     required String fileName,
     required String subject,
   }) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final pixelRatio =
+        mounted ? MediaQuery.of(context).devicePixelRatio : 1.0;
     try {
       // Tunggu dialog merender konten sepenuhnya (wait for dialog animation)
       await Future.delayed(const Duration(milliseconds: 350));
@@ -1492,7 +1495,6 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
         await WidgetsBinding.instance.endOfFrame;
       }
 
-      final pixelRatio = MediaQuery.of(context).devicePixelRatio;
       final image = await boundary.toImage(pixelRatio: pixelRatio);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
@@ -1520,7 +1522,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      messenger?.showSnackBar(
         SnackBar(content: Text('Gagal membagikan ayat: $e')),
       );
     }
