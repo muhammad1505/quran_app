@@ -438,12 +438,12 @@ class _QuranPageState extends State<QuranPage> {
           ),
           ElevatedButton(
             onPressed: () async {
+              final navigator = Navigator.of(context);
               final name = controller.text.trim();
               if (name.isEmpty) return;
               await cubit.addFolder(name);
-              if (mounted) {
-                Navigator.pop(context);
-              }
+              if (!mounted) return;
+              navigator.pop();
             },
             child: const Text('Simpan'),
           ),
