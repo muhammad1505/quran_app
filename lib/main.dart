@@ -366,7 +366,7 @@ class HomePage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const QuranPage()),
-                  ).then((_) => context.read<HomeCubit>().fetchInitialData());
+                  ).then((_) => context.read<HomeCubit>().refreshLastRead());
                   return;
                 }
                 Navigator.push(
@@ -377,7 +377,7 @@ class HomePage extends StatelessWidget {
                       initialVerse: lastRead.ayah,
                     ),
                   ),
-                ).then((_) => context.read<HomeCubit>().fetchInitialData());
+                ).then((_) => context.read<HomeCubit>().refreshLastRead());
               },
               child: const Text("Lanjut"),
             ),

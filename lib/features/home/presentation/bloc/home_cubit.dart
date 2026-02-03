@@ -56,16 +56,11 @@ class HomeCubit extends Cubit<HomeState> {
       final verseCount = quran.getVerseCount(surah);
       final ayah = (dayIndex % verseCount) + 1;
       final arabic = quran.getVerse(surah, ayah);
-      String translation = '';
-      try {
-        translation = await _resolveTranslation(
-          _quranSettings.value.translation,
-          surah,
-          ayah,
-        );
-      } catch (_) {
-        translation = '';
-      }
+      final translation = await _resolveTranslation(
+        _quranSettings.value.translation,
+        surah,
+        ayah,
+      );
 
       final dailyVerse = DailyVerse(
         surah: surah,
@@ -80,7 +75,8 @@ class HomeCubit extends Cubit<HomeState> {
       }
     } catch (e) {
       if (state is HomeLoaded) {
-        emit((state as HomeLoaded).copyWith(isDailyVerseLoading: false));
+        emit((state as HomeLoaded)
+            .copyWith(dailyVerse: null, isDailyVerseLoading: false));
       }
     }
   }
@@ -93,6 +89,14 @@ class HomeCubit extends Cubit<HomeState> {
     final bookmarkKeys = await _bookmarkService.getKeys();
     if (state is HomeLoaded) {
       emit((state as HomeLoaded).copyWith(bookmarkKeys: bookmarkKeys));
+    }
+  }
+
+  Future<void> refreshLastRead() async {
+    final currentState = state;
+    if (currentState is HomeLoaded) {
+      final lastRead = await _lastReadService.getLastRead();
+      emit(currentState.copyWith(lastRead: lastRead));
     }
   }
 
