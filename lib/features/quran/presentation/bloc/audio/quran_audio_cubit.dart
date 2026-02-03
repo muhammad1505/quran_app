@@ -90,6 +90,14 @@ class QuranAudioCubit extends Cubit<QuranAudioState> {
     _emitCurrentState();
   }
 
+  Future<void> loadSurah({required int surahNumber, int? initialVerse}) async {
+    _currentSurah = surahNumber;
+    _currentAyah = initialVerse;
+    _isAyahMode = initialVerse != null;
+    await _updateDownloadStatus();
+    _emitCurrentState();
+  }
+
   Future<void> playSurah(int surahNumber) async {
     try {
       // Pause if it's the same surah playing
@@ -205,6 +213,10 @@ class QuranAudioCubit extends Cubit<QuranAudioState> {
     } else {
       await _player.play();
     }
+  }
+
+  Future<void> seek(Duration position) async {
+    await _player.seek(position);
   }
   
   int _getGlobalAyahIndex(int surah, int ayah) {

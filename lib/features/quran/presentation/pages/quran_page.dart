@@ -16,6 +16,7 @@ import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/bookmark_service.dart';
 import 'package:quran_app/core/services/last_read_service.dart';
 import 'package:quran_app/core/services/translation_service.dart';
+import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/services/word_by_word_service.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 import 'package:quran_app/core/settings/theme_settings.dart';
@@ -494,6 +495,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
       getIt<QuranSettingsController>();
   final ThemeSettingsController _themeSettings =
       getIt<ThemeSettingsController>();
+  final AudioSettingsController _audioSettings = AudioSettingsController.instance;
 
   @override
   void initState() {
@@ -505,14 +507,17 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
 
     _quranSettings.addListener(_onSettingsChanged);
     _themeSettings.addListener(_onSettingsChanged);
+    _audioSettings.addListener(_onSettingsChanged);
     _maybeLoadCustomTranslation();
     _loadBookmarks();
+    _audioSettings.load();
   }
 
   @override
   void dispose() {
     _quranSettings.removeListener(_onSettingsChanged);
     _themeSettings.removeListener(_onSettingsChanged);
+    _audioSettings.removeListener(_onSettingsChanged);
     _scrollController.dispose();
     super.dispose();
   }
@@ -1003,7 +1008,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                     color: Theme.of(context).primaryColor.withAlpha(26),
                   ),
                   child: Text(
-                    '${_quranSettings.value.playbackSpeed.toStringAsFixed(2).replaceAll('.00', '')}x',
+                    '${_audioSettings.value.playbackSpeed.toStringAsFixed(2).replaceAll('.00', '')}x',
                     style: TextStyle(color: Theme.of(context).primaryColor),
                   ),
                 ),

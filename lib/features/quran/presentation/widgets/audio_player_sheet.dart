@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:quran/quran.dart' as quran;
+import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/features/quran/presentation/bloc/audio/quran_audio_cubit.dart';
 import 'package:quran_app/features/quran/presentation/bloc/audio/quran_audio_state.dart';
 
@@ -10,6 +11,7 @@ class QuranAudioPlayerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cubit = context.watch<QuranAudioCubit>();
+    final audioSettings = AudioSettingsController.instance;
 
     return BlocBuilder<QuranAudioCubit, QuranAudioState>(
       builder: (context, state) {
@@ -61,7 +63,7 @@ class QuranAudioPlayerSheet extends StatelessWidget {
                   width: 42,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.4),
+                    color: Colors.grey.withAlpha((255 * 0.4).round()),
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
@@ -172,10 +174,10 @@ class QuranAudioPlayerSheet extends StatelessWidget {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             color:
-                                Theme.of(context).primaryColor.withOpacity(0.1),
+                                Theme.of(context).primaryColor.withAlpha((255 * 0.1).round()),
                           ),
                           child: Text(
-                            '${cubit.playbackSpeed.toStringAsFixed(2).replaceAll('.00', '')}x',
+                            '${audioSettings.value.playbackSpeed.toStringAsFixed(2).replaceAll('.00', '')}x',
                             style: TextStyle(
                               color: Theme.of(context).primaryColor,
                             ),
