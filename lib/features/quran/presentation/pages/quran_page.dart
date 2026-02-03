@@ -1296,13 +1296,15 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                 (folder) => ListTile(
                   title: Text(folder.name),
                   onTap: () async {
-                    Navigator.pop(context);
+                    final navigator = Navigator.of(context);
                     await BookmarkService.instance.assignFolder(
                       surah: widget.surahNumber,
                       ayah: verseNumber,
                       folderId: folder.id,
                     );
-                    if (mounted) setState(() {});
+                    if (!mounted) return;
+                    navigator.pop();
+                    setState(() {});
                   },
                 ),
               ),
@@ -1377,6 +1379,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
             ),
             ElevatedButton(
               onPressed: () async {
+                final navigator = Navigator.of(context);
                 await _captureAndShare(
                   boundaryKey,
                   fileName:
@@ -1385,7 +1388,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                       'Surah ${quran.getSurahName(widget.surahNumber)} ayat $verseNumber',
                 );
                 if (!mounted) return;
-                Navigator.pop(context);
+                navigator.pop();
               },
               child: const Text('Bagikan'),
             ),
