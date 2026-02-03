@@ -407,12 +407,11 @@ class _HomePageState extends State<HomePage> {
     final isBookmarked =
         verse != null && state.bookmarkKeys.contains('${verse.surah}:${verse.ayah}');
 
-    toggleDailyVerseBookmark(DailyVerse verse) async {
-      final messenger = ScaffoldMessenger.of(context);
+    void toggleDailyVerseBookmark(DailyVerse verse) async {
       final wasBookmarked = isBookmarked;
       await context.read<HomeCubit>().toggleDailyVerseBookmark(verse);
       if (!mounted) return;
-      messenger.showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             wasBookmarked ? 'Bookmark dihapus.' : 'Bookmark disimpan.',
@@ -503,7 +502,7 @@ class _HomePageState extends State<HomePage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withAlpha(26),
+              color: Theme.of(context).colorScheme.primary.withAlpha(26),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, color: Theme.of(context).primaryColor, size: 28),
