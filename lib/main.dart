@@ -408,11 +408,10 @@ class _HomePageState extends State<HomePage> {
         verse != null && state.bookmarkKeys.contains('${verse.surah}:${verse.ayah}');
 
     toggleDailyVerseBookmark(DailyVerse verse) async {
-      final messenger = ScaffoldMessenger.of(context);
       final wasBookmarked = isBookmarked;
       await context.read<HomeCubit>().toggleDailyVerseBookmark(verse);
       if (!mounted) return;
-      messenger.showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             wasBookmarked ? 'Bookmark dihapus.' : 'Bookmark disimpan.',

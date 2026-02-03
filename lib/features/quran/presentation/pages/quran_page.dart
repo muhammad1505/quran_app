@@ -1384,6 +1384,8 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                   subject:
                       'Surah ${quran.getSurahName(widget.surahNumber)} ayat $verseNumber',
                 );
+                if (!mounted) return;
+                Navigator.pop(context);
               },
               child: const Text('Bagikan'),
             ),
@@ -1461,7 +1463,6 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     required String fileName,
     required String subject,
   }) async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
     try {
       // Tunggu dialog merender konten sepenuhnya (wait for dialog animation)
       await Future.delayed(const Duration(milliseconds: 350));
@@ -1516,7 +1517,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
       }
     } catch (e) {
       if (!mounted) return;
-      messenger?.showSnackBar(
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         SnackBar(content: Text('Gagal membagikan ayat: $e')),
       );
     }
