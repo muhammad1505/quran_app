@@ -1,33 +1,18 @@
-import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:quran_app/main.dart';
-import 'package:quran_app/core/di/injection.dart';
 import 'package:get_it/get_it.dart';
-
-// A minimal, valid font file.
-final fontData = Uint8List.fromList(
-  [
-    0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
-    1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1,
-  ],
-);
+import 'package:google_fonts/google_fonts.dart';
+import 'package:quran_app/core/di/injection.dart';
+import 'package:quran_app/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   setUp(() async {
     await GetIt.instance.reset();
     await configureDependencies();
-    // This is the crucial part that was missing/wrong before.
-    // We override the HttpClient for all tests in this file.
-    HttpOverrides.global = MockHttpOverrides();
-  });
-
-  tearDown(() {
-    // Clean up the override after tests.
-    HttpOverrides.global = null;
+    // Disable network fetching for google_fonts
+    GoogleFonts.config.allowRuntimeFetching = false;
   });
 
   testWidgets('App smoke test', (WidgetTester tester) async {
@@ -130,66 +115,3 @@ void main() {
   });
 }
 
-// --- Corrected Mock Implementation for dart:io:HttpClient ---
-
-class MockHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return MockHttpClient();
-  }
-}
-
-class MockHttpClient extends Fake implements HttpClient {
-  @override
-  Future<HttpClientRequest> getUrl(Uri url) async {
-    // Intercept the font request.
-    if (url.toString().startsWith('https://fonts.gstatic.com')) {
-      return MockHttpClientRequest();
-    }
-    // For other requests, you might want to throw an error or handle differently.
-    return MockHttpClientRequest();
-  }
-}
-
-class MockHttpClientRequest extends Fake implements HttpClientRequest {
-  @override
-  final HttpHeaders headers = MockHttpHeaders();
-
-  @override
-  Future<HttpClientResponse> close() async {
-    return MockHttpClientResponse();
-  }
-}
-
-class MockHttpHeaders extends Fake implements HttpHeaders {
-  @override
-  void add(String name, Object value, {bool preserveHeaderCase = false}) {}
-}
-
-class MockHttpClientResponse extends Fake implements HttpClientResponse {
-  @override
-  int get statusCode => HttpStatus.ok;
-
-  @override
-  int get contentLength => fontData.length;
-
-  @override
-  HttpClientResponseCompressionState get compressionState =>
-      HttpClientResponseCompressionState.notCompressed;
-
-  // This is the key fix: return a stream with the fake font data.
-  @override
-  StreamSubscription<List<int>> listen(
-    void Function(List<int> event)? onData, {
-    Function? onError,
-    void Function()? onDone,
-    bool? cancelOnError,
-  }) {
-    return Stream.value(fontData).listen(
-      onData,
-      onDone: onDone,
-      onError: onError,
-      cancelOnError: cancelOnError,
-    );
-  }
-}
