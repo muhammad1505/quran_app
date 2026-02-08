@@ -35,8 +35,7 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Scaffold Platform Support
-        run: flutter create .
+
 
       # 2. Quality Assurance
       - name: Analyze Code
