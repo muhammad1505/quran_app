@@ -22,6 +22,9 @@ download() {
 download "${MAKKAH_WMV}" "${TMP_DIR}/makkah.wmv"
 download "${MADINAH_WMV}" "${TMP_DIR}/madinah.wmv"
 
+rm -f "${RAW_DIR}/azan_makkah.mp3"
+rm -f "${RAW_DIR}/azan_madinah.mp3"
+
 ffmpeg -y -i "${TMP_DIR}/makkah.wmv" -vn -ac 1 -ar 44100 -c:a libvorbis "${RAW_DIR}/azan_makkah.ogg"
 ffmpeg -y -i "${TMP_DIR}/madinah.wmv" -vn -ac 1 -ar 44100 -c:a libvorbis "${RAW_DIR}/azan_madinah.ogg"
 
