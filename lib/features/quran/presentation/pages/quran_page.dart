@@ -397,8 +397,8 @@ class _QuranPageState extends State<QuranPage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () async {
-                    await Navigator.push(
+                                    onTap: () {
+                    Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => SurahDetailPage(
@@ -406,9 +406,12 @@ class _QuranPageState extends State<QuranPage> {
                           initialVerse: item.ayah,
                         ),
                       ),
-                    );
-                    if (!context.mounted) return;
-                    context.read<BookmarkCubit>().loadBookmarks();
+                    ).then((_) {
+                      if (!mounted) return;
+                      if (context.mounted) {
+                        context.read<BookmarkCubit>().loadBookmarks();
+                      }
+                    });
                   },
                 ),
               );
@@ -437,13 +440,14 @@ class _QuranPageState extends State<QuranPage> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () async {
+                        onPressed: () {
               final navigator = Navigator.of(context);
               final name = controller.text.trim();
               if (name.isEmpty) return;
-              await cubit.addFolder(name);
-              if (!mounted) return;
-              navigator.pop();
+              cubit.addFolder(name).then((_) {
+                if (!mounted) return;
+                navigator.pop();
+              });
             },
             child: const Text('Simpan'),
           ),
@@ -807,9 +811,12 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                   ),
                   onTap: downloadStatus == DownloadStatus.downloading
                       ? null
-                      : () async {
-                          Navigator.pop(context);
-                          await cubit.toggleDownload();
+                      : () {
+                          final navigator = Navigator.of(context);
+                          cubit.toggleDownload().then((_) {
+                            if (!mounted) return;
+                            navigator.pop();
+                          });
                         },
                 ),
               ListTile(
@@ -819,22 +826,23 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                       ? 'Hapus bookmark'
                       : 'Simpan bookmark',
                 ),
-                onTap: () async {
+                onTap: () {
                   final navigator = Navigator.of(context);
                   final messenger = ScaffoldMessenger.of(context);
                   final wasBookmarked = _isBookmarked(verseForBookmark);
                   navigator.pop();
-                  await _toggleBookmark(verseForBookmark);
-                  if (!mounted) return;
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        wasBookmarked
-                            ? 'Bookmark dihapus.'
-                            : 'Bookmark disimpan.',
+                  _toggleBookmark(verseForBookmark).then((_) {
+                    if (!mounted) return;
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          wasBookmarked
+                              ? 'Bookmark dihapus.'
+                              : 'Bookmark disimpan.',
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  });
                 },
               ),
               ListTile(
@@ -1095,9 +1103,12 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
               ListTile(
                 leading: const Icon(Icons.bookmark_border),
                 title: Text(isSaved ? 'Hapus bookmark' : 'Simpan bookmark'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await _toggleBookmark(verseNumber);
+                onTap: () {
+                  final navigator = Navigator.of(context);
+                  _toggleBookmark(verseNumber).then((_) {
+                    if (!mounted) return;
+                    navigator.pop();
+                  });
                 },
               ),
               ListTile(
@@ -1119,48 +1130,51 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
               ListTile(
                 leading: const Icon(Icons.copy_all),
                 title: const Text('Salin teks Arab'),
-                onTap: () async {
+                                                onTap: () {
                   final navigator = Navigator.of(context);
                   final messenger = ScaffoldMessenger.of(context);
-                  await Clipboard.setData(ClipboardData(text: arabic));
-                  if (!mounted) return;
-                  navigator.pop();
-                  messenger.showSnackBar(
-                    const SnackBar(content: Text('Teks Arab disalin.')),
-                  );
+                  Clipboard.setData(ClipboardData(text: arabic)).then((_) {
+                    if (!mounted) return;
+                    navigator.pop();
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Teks Arab disalin.')),
+                    );
+                  });
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.copy),
                 title: const Text('Salin terjemahan'),
-                onTap: () async {
+                                                onTap: () {
                   final navigator = Navigator.of(context);
                   final messenger = ScaffoldMessenger.of(context);
-                  await Clipboard.setData(ClipboardData(text: translation));
-                  if (!mounted) return;
-                  navigator.pop();
-                  messenger.showSnackBar(
-                    const SnackBar(content: Text('Terjemahan disalin.')),
-                  );
+                  Clipboard.setData(ClipboardData(text: translation)).then((_) {
+                    if (!mounted) return;
+                    navigator.pop();
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Terjemahan disalin.')),
+                    );
+                  });
                 },
               ),
               if (transliteration.isNotEmpty)
                 ListTile(
                   leading: const Icon(Icons.text_fields),
                   title: const Text('Salin transliterasi'),
-                  onTap: () async {
+                                                      onTap: () {
                     final navigator = Navigator.of(context);
                     final messenger = ScaffoldMessenger.of(context);
-                    await Clipboard.setData(
+                    Clipboard.setData(
                       ClipboardData(text: transliteration),
-                    );
-                    if (!mounted) return;
-                    navigator.pop();
-                    messenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('Transliterasi disalin.'),
-                      ),
-                    );
+                    ).then((_) {
+                      if (!mounted) return;
+                      navigator.pop();
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Transliterasi disalin.'),
+                        ),
+                      );
+                    });
                   },
                 ),
               ListTile(
@@ -1229,18 +1243,21 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
               child: const Text('Batal'),
             ),
             ElevatedButton(
-              onPressed: () async {
+                            onPressed: () {
+                final navigator = Navigator.of(context);
                 final note = controller.text.trim();
                 if (note.isNotEmpty) {
-                  await BookmarkService.instance.saveNote(
+                  BookmarkService.instance.saveNote(
                     surah: widget.surahNumber,
                     ayah: verseNumber,
                     note: note,
-                  );
-                  await _loadBookmarks();
-                }
-                if (context.mounted) {
-                  Navigator.pop(context);
+                  ).then((_) {
+                    if (!mounted) return;
+                    _loadBookmarks();
+                    navigator.pop();
+                  });
+                } else {
+                  navigator.pop();
                 }
               },
               child: const Text('Simpan'),
@@ -1262,6 +1279,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
       await _loadBookmarks();
       if (!mounted) return;
     }
+    final navigator = Navigator.of(context);
     if (!mounted) return;
     showModalBottomSheet(
       context: context,
@@ -1275,36 +1293,41 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                 trailing: IconButton(
                   icon: const Icon(Icons.add),
                   onPressed: () {
-                    Navigator.pop(context);
+                    navigator.pop();
                     _showCreateFolderDialog();
                   },
                 ),
               ),
               ListTile(
                 title: const Text('Tanpa folder'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await BookmarkService.instance.assignFolder(
+                                onTap: () {
+                  final bNavigator = Navigator.of(context);
+                  BookmarkService.instance.assignFolder(
                     surah: widget.surahNumber,
                     ayah: verseNumber,
                     folderId: null,
-                  );
-                  if (mounted) setState(() {});
+                  ).then((_) {
+                    if (mounted) {
+                      bNavigator.pop();
+                      setState(() {});
+                    }
+                  });
                 },
               ),
               ...folders.map(
                 (folder) => ListTile(
                   title: Text(folder.name),
-                  onTap: () async {
-                    final navigator = Navigator.of(context);
-                    await BookmarkService.instance.assignFolder(
+                                                      onTap: () {
+                    final bNavigator = Navigator.of(context);
+                    BookmarkService.instance.assignFolder(
                       surah: widget.surahNumber,
                       ayah: verseNumber,
                       folderId: folder.id,
-                    );
-                    if (!mounted) return;
-                    navigator.pop();
-                    setState(() {});
+                    ).then((_) {
+                      if (!mounted) return;
+                      bNavigator.pop();
+                      setState(() {});
+                    });
                   },
                 ),
               ),
@@ -1333,14 +1356,16 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () async {
+                                    onPressed: () {
+              final navigator = Navigator.of(context);
               final name = controller.text.trim();
               if (name.isEmpty) return;
-              await BookmarkService.instance.addFolder(name);
-              if (context.mounted) {
-                Navigator.pop(context);
-                setState(() {});
-              }
+              BookmarkService.instance.addFolder(name).then((_) {
+                if (context.mounted) {
+                  navigator.pop();
+                  setState(() {});
+                }
+              });
             },
             child: const Text('Simpan'),
           ),
@@ -1378,17 +1403,18 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
               child: const Text('Batal'),
             ),
             ElevatedButton(
-              onPressed: () async {
+                                                      onPressed: () {
                 final navigator = Navigator.of(context);
-                await _captureAndShare(
+                _captureAndShare(
                   boundaryKey,
                   fileName:
                       'ayah_${widget.surahNumber}_$verseNumber.png',
                   subject:
                       'Surah ${quran.getSurahName(widget.surahNumber)} ayat $verseNumber',
-                );
-                if (!navigator.mounted) return;
-                navigator.pop();
+                ).then((_) {
+                  if (!navigator.mounted) return;
+                  navigator.pop();
+                });
               },
               child: const Text('Bagikan'),
             ),
@@ -1476,9 +1502,10 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
 
       // Ensure frame is drawn
       await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
 
       final contextObject = boundaryKey.currentContext;
-      if (contextObject == null) {
+      if (contextObject == null || !contextObject.mounted) {
         throw Exception('Gagal menangkap gambar: Context null.');
       }
 
@@ -1532,6 +1559,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
   Widget build(BuildContext context) {
     return BlocConsumer<QuranAudioCubit, QuranAudioState>(
       listener: (context, state) {
+        final messenger = ScaffoldMessenger.of(context);
         if (state is QuranAudioPlaying && state.currentAyah != _highlightVerse) {
           setState(() {
             _highlightVerse = state.currentAyah;
@@ -1542,7 +1570,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
           });
         }
         if (state is QuranAudioError) {
-          ScaffoldMessenger.of(context)
+          messenger
             ..hideCurrentSnackBar()
             ..showSnackBar(SnackBar(content: Text(state.message)));
         }
@@ -1596,21 +1624,22 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                 tooltip: "Audio",
               ),
               IconButton(
-                onPressed: () async {
+                onPressed: () {
                   final messenger = ScaffoldMessenger.of(context);
                   final verseToBookmark = currentVerse ?? _highlightVerse ?? 1;
                   final wasBookmarked = _isBookmarked(verseToBookmark);
-                  await _toggleBookmark(verseToBookmark);
-                  if (!mounted) return;
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        wasBookmarked
-                            ? 'Bookmark dihapus.'
-                            : 'Bookmark disimpan.',
+                  _toggleBookmark(verseToBookmark).then((_) {
+                    if (!mounted || !context.mounted) return;
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          wasBookmarked
+                              ? 'Bookmark dihapus.'
+                              : 'Bookmark disimpan.',
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  });
                 },
                 icon: Icon(
                   isBookmarked ? Icons.bookmark : Icons.bookmark_border,
@@ -1831,6 +1860,3 @@ class _JuzStart {
 
   const _JuzStart(this.surah, this.ayah);
 }
-
-
-

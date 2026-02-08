@@ -331,74 +331,81 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildContinueReadingCard(BuildContext context, LastRead? lastRead) {
-    final hasLastRead = lastRead != null;
-    final surahName = hasLastRead ? quran.getSurahName(lastRead.surah) : '';
-    final totalVerses = hasLastRead ? quran.getVerseCount(lastRead.surah) : 0;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withAlpha(26),
-                borderRadius: BorderRadius.circular(14),
+    Widget _buildContinueReadingCard(BuildContext context, LastRead? lastRead) {
+      final hasLastRead = lastRead != null;
+      final surahName = hasLastRead ? quran.getSurahName(lastRead.surah) : '';
+      final totalVerses = hasLastRead ? quran.getVerseCount(lastRead.surah) : 0;
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withAlpha(26),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  Icons.bookmark_border,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
-              child: Icon(
-                Icons.bookmark_border,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Lanjutkan Bacaan",
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    hasLastRead
-                        ? '$surahName • Ayat ${lastRead.ayah} / $totalVerses'
-                        : "Belum ada bacaan tersimpan",
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: () async {
-                final cubit = context.read<HomeCubit>();
-                final navigator = Navigator.of(context);
-                if (!hasLastRead) {
-                  await navigator.push(
-                    MaterialPageRoute(builder: (_) => const QuranPage()),
-                  );
-                  if (!mounted) return;
-                  cubit.refreshLastRead();
-                  return;
-                }
-                await navigator.push(
-                  MaterialPageRoute(
-                    builder: (_) => SurahDetailPage(
-                      surahNumber: lastRead.surah,
-                      initialVerse: lastRead.ayah,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Lanjutkan Bacaan",
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                  ),
-                );
-                if (!mounted) return;
-                cubit.refreshLastRead();
-              },
-              child: const Text("Lanjut"),
-            ),
-          ],
+                    const SizedBox(height: 4),
+                    Text(
+                      hasLastRead
+                          ? '$surahName • Ayat ${lastRead.ayah} / $totalVerses'
+                          : "Belum ada bacaan tersimpan",
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  final cubit = context.read<HomeCubit>();
+                  final page = !hasLastRead
+                      ? const QuranPage()
+                      : SurahDetailPage(
+                          surahNumber: lastRead.surah,
+                          initialVerse: lastRead.ayah,
+                        );
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => page),
+                  ).then((_) {
+                    if (mounted) {
+                      cubit.refreshLastRead();
+                    }
+                  });
+                },
+                child: const Text("Lanjut"),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    }
+  void _toggleDailyVerseBookmark(DailyVerse verse, bool isBookmarked) {
+    context.read<HomeCubit>().toggleDailyVerseBookmark(verse).then((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isBookmarked ? 'Bookmark dihapus.' : 'Bookmark disimpan.',
+          ),
+        ),
+      );
+    });
   }
 
   Widget _buildDailyHighlightCard(BuildContext context, HomeLoaded state) {
@@ -406,21 +413,6 @@ class _HomePageState extends State<HomePage> {
     final isLoading = state.isDailyVerseLoading;
     final isBookmarked =
         verse != null && state.bookmarkKeys.contains('${verse.surah}:${verse.ayah}');
-
-    void toggleDailyVerseBookmark(DailyVerse verse) async {
-      final cubit = context.read<HomeCubit>();
-      final messenger = ScaffoldMessenger.of(context);
-      final wasBookmarked = isBookmarked;
-      await cubit.toggleDailyVerseBookmark(verse);
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            wasBookmarked ? 'Bookmark dihapus.' : 'Bookmark disimpan.',
-          ),
-        ),
-      );
-    }
 
     return Card(
       child: Padding(
@@ -466,7 +458,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 TextButton.icon(
                   onPressed:
-                      verse == null ? null : () => toggleDailyVerseBookmark(verse),
+                      verse == null ? null : () => _toggleDailyVerseBookmark(verse, isBookmarked),
                   icon: Icon(
                     isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                     size: 18,
