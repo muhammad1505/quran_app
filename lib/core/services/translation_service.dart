@@ -1,14 +1,10 @@
 import 'dart:convert';
-
 import 'package:flutter/services.dart';
-
+import 'package:injectable/injectable.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 
+@lazySingleton
 class TranslationAssetService {
-  TranslationAssetService._();
-
-  static final TranslationAssetService instance = TranslationAssetService._();
-
   final Map<TranslationSource, Map<String, String>> _cache = {};
   final Map<TranslationSource, Future<Map<String, String>>> _inFlight = {};
 

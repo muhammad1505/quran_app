@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AudioSettings {
@@ -33,6 +34,7 @@ class AudioSettings {
   }
 }
 
+@lazySingleton
 class AudioSettingsController extends ChangeNotifier {
   static const _qariKey = 'qari';
   static const _volumeKey = 'volume';
@@ -40,10 +42,6 @@ class AudioSettingsController extends ChangeNotifier {
   static const _repeatKey = 'audio_repeat_one';
   static const _autoNextKey = 'audio_auto_next';
   static const _allowedQariIds = {'alafasy', 'abdulbasit', 'basfar'};
-
-  AudioSettingsController._();
-
-  static final AudioSettingsController instance = AudioSettingsController._();
 
   AudioSettings _value = const AudioSettings();
   AudioSettings get value => _value;

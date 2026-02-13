@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
+import 'package:injectable/injectable.dart';
 
 class AsmaulHusnaItem {
   final int number;
@@ -18,11 +19,8 @@ class AsmaulHusnaItem {
   });
 }
 
+@lazySingleton
 class AsmaulHusnaService {
-  AsmaulHusnaService._();
-
-  static final AsmaulHusnaService instance = AsmaulHusnaService._();
-
   Future<List<AsmaulHusnaItem>>? _loadFuture;
 
   Future<List<AsmaulHusnaItem>> load() {

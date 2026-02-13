@@ -1,3 +1,4 @@
+import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LastRead {
@@ -12,11 +13,8 @@ class LastRead {
   });
 }
 
+@lazySingleton
 class LastReadService {
-  LastReadService._();
-
-  static final LastReadService instance = LastReadService._();
-
   static const _surahKey = 'last_read_surah';
   static const _ayahKey = 'last_read_ayah';
   static const _updatedKey = 'last_read_at';

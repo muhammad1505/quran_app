@@ -1,7 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:share_plus/share_plus.dart';
-
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/asmaul_husna_service.dart';
 import 'package:quran_app/core/services/doa_favorite_service.dart';
 import 'package:quran_app/core/services/tts_service.dart';
@@ -223,6 +220,9 @@ class _DoaPageState extends State<DoaPage> {
   ];
 
   late final List<_DzikirProgress> _dzikirProgress;
+  late final TtsService _ttsService;
+  late final DoaFavoriteService _doaFavoriteService;
+  late final AsmaulHusnaService _asmaulHusnaService;
 
   String _selectedCategory = 'Semua';
   Set<String> _favoriteIds = {};
@@ -234,18 +234,21 @@ class _DoaPageState extends State<DoaPage> {
     super.initState();
     _dzikirProgress =
         List.generate(_dzikirItems.length, (_) => const _DzikirProgress());
+    _ttsService = getIt<TtsService>();
+    _doaFavoriteService = getIt<DoaFavoriteService>();
+    _asmaulHusnaService = getIt<AsmaulHusnaService>();
     _loadFavorites();
   }
 
   @override
   void dispose() {
     _stopAsmaulRequested = true;
-    TtsService.instance.stop();
+    _ttsService.stop();
     super.dispose();
   }
 
   Future<void> _loadFavorites() async {
-    final favorites = await DoaFavoriteService.instance.getFavorites();
+    final favorites = await _doaFavoriteService.getFavorites();
     if (!mounted) return;
     setState(() => _favoriteIds = favorites);
   }
@@ -254,7 +257,7 @@ class _DoaPageState extends State<DoaPage> {
 
   Future<void> _toggleFavorite(DoaItem doa) async {
     final messenger = ScaffoldMessenger.of(context);
-    final updated = await DoaFavoriteService.instance.toggle(doa.id);
+    final updated = await _doaFavoriteService.toggle(doa.id);
     if (!mounted) return;
     setState(() => _favoriteIds = updated);
     messenger.showSnackBar(
@@ -284,7 +287,7 @@ class _DoaPageState extends State<DoaPage> {
   Future<void> _toggleAsmaulPlayAll(List<AsmaulHusnaItem> items) async {
     if (_isAsmaulPlayingAll) {
       _stopAsmaulRequested = true;
-      await TtsService.instance.stop();
+      await _ttsService.stop();
       if (mounted) {
         setState(() => _isAsmaulPlayingAll = false);
       }
@@ -299,7 +302,7 @@ class _DoaPageState extends State<DoaPage> {
       final text = item.meaningId.isNotEmpty
           ? '${item.transliteration}. ${item.meaningId}'
           : item.transliteration;
-      await TtsService.instance.speak(text, language: 'id-ID');
+      await _ttsService.speak(text, language: 'id-ID');
     }
     if (mounted) {
       setState(() => _isAsmaulPlayingAll = false);
@@ -368,7 +371,7 @@ class _DoaPageState extends State<DoaPage> {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => DoaDetailPage(doa: doa)),
+            MaterialPageRoute(builder: (_) => DoaDetailPage(doa: doa, ttsService: _ttsService)),
           );
         },
         child: Padding(
@@ -459,7 +462,7 @@ class _DoaPageState extends State<DoaPage> {
 
   Widget _buildAsmaulTab(BuildContext context) {
     return FutureBuilder<List<AsmaulHusnaItem>>(
-      future: AsmaulHusnaService.instance.load(),
+      future: _asmaulHusnaService.load(),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
@@ -562,8 +565,9 @@ class _DzikirItem {
 
 class DoaDetailPage extends StatelessWidget {
   final DoaItem doa;
+  final TtsService ttsService;
 
-  const DoaDetailPage({super.key, required this.doa});
+  const DoaDetailPage({super.key, required this.doa, required this.ttsService});
 
   @override
   Widget build(BuildContext context) {
@@ -605,7 +609,7 @@ class DoaDetailPage extends StatelessWidget {
                     final text = doa.latin.isNotEmpty
                         ? doa.latin
                         : doa.translation;
-                    await TtsService.instance.speak(
+                    await ttsService.speak(
                       text,
                       language: 'id-ID',
                     );

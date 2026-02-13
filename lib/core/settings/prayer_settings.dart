@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:adhan/adhan.dart';
@@ -104,6 +105,7 @@ class PrayerSettings {
   }
 }
 
+@lazySingleton
 class PrayerSettingsController extends ChangeNotifier {
   static const _methodKey = 'prayer_method';
   static const _madhabKey = 'prayer_madhab';
@@ -115,10 +117,6 @@ class PrayerSettingsController extends ChangeNotifier {
   static const _notifyIshaKey = 'notify_isha';
   static const _silentModeKey = 'prayer_silent_mode';
   static const _adzanSoundKey = 'prayer_adzan_sound';
-
-  PrayerSettingsController._();
-
-  static final PrayerSettingsController instance = PrayerSettingsController._();
 
   PrayerSettings _value = const PrayerSettings();
   PrayerSettings get value => _value;

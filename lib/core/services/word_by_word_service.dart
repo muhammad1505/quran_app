@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:injectable/injectable.dart';
 
 import 'package:quran_app/core/settings/quran_settings.dart';
 
@@ -17,11 +18,8 @@ class WordByWordItem {
   });
 }
 
+@lazySingleton
 class WordByWordService {
-  WordByWordService._();
-
-  static final WordByWordService instance = WordByWordService._();
-
   Future<Map<String, List<WordByWordItem>>>? _loadEnFuture;
   Future<Map<String, List<WordByWordItem>>>? _loadIdFuture;
   Map<String, List<WordByWordItem>>? _cacheEn;

@@ -7,9 +7,9 @@ part 'bookmark_state.dart';
 
 @injectable
 class BookmarkCubit extends Cubit<BookmarkState> {
-  final BookmarkService _bookmarkService = BookmarkService.instance;
+  final BookmarkService _bookmarkService;
 
-  BookmarkCubit() : super(BookmarkLoading());
+  BookmarkCubit(this._bookmarkService) : super(BookmarkLoading());
 
   Future<void> loadBookmarks() async {
     try {

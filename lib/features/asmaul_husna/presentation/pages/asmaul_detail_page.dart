@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:quran_app/core/di/injection.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'package:quran_app/core/services/asmaul_husna_service.dart';
 import 'package:quran_app/core/services/tts_service.dart';
 
-class AsmaulDetailPage extends StatelessWidget {
+class AsmaulDetailPage extends StatefulWidget {
   final AsmaulHusnaItem item;
   final bool showEnglish;
 
@@ -16,18 +17,31 @@ class AsmaulDetailPage extends StatelessWidget {
   });
 
   @override
+  State<AsmaulDetailPage> createState() => _AsmaulDetailPageState();
+}
+
+class _AsmaulDetailPageState extends State<AsmaulDetailPage> {
+  late final TtsService _ttsService;
+
+  @override
+  void initState() {
+    super.initState();
+    _ttsService = getIt<TtsService>();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final meaning = showEnglish ? item.meaningEn : item.meaningId;
+    final meaning = widget.showEnglish ? widget.item.meaningEn : widget.item.meaningId;
     return Scaffold(
       appBar: AppBar(
-        title: Text(item.transliteration),
+        title: Text(widget.item.transliteration),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           Center(
             child: Text(
-              item.arabic,
+              widget.item.arabic,
               textAlign: TextAlign.center,
               style: GoogleFonts.amiri(
                 fontSize: 36,
@@ -38,7 +52,7 @@ class AsmaulDetailPage extends StatelessWidget {
           const SizedBox(height: 12),
           Center(
             child: Text(
-              item.transliteration,
+              widget.item.transliteration,
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
@@ -59,7 +73,7 @@ class AsmaulDetailPage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Nama ini mengingatkan kita akan sifat ${item.transliteration} yang mengandung makna “$meaning”. Jadikan nama ini sebagai dzikir untuk menumbuhkan ketenangan dan ketakwaan dalam keseharian.',
+            'Nama ini mengingatkan kita akan sifat ${widget.item.transliteration} yang mengandung makna “$meaning”. Jadikan nama ini sebagai dzikir untuk menumbuhkan ketenangan dan ketakwaan dalam keseharian.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 20),
@@ -69,11 +83,11 @@ class AsmaulDetailPage extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () async {
                     final text = meaning.isNotEmpty
-                        ? '${item.transliteration}. $meaning'
-                        : item.transliteration;
-                    await TtsService.instance.speak(
+                        ? '${widget.item.transliteration}. $meaning'
+                        : widget.item.transliteration;
+                    await _ttsService.speak(
                       text,
-                      language: showEnglish ? 'en-US' : 'id-ID',
+                      language: widget.showEnglish ? 'en-US' : 'id-ID',
                     );
                   },
                   icon: const Icon(Icons.play_arrow),
@@ -85,7 +99,7 @@ class AsmaulDetailPage extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () {
                     Share.share(
-                      'Asmaul Husna: ${item.transliteration}\n\n${item.arabic}\n$meaning',
+                      'Asmaul Husna: ${widget.item.transliteration}\n\n${widget.item.arabic}\n$meaning',
                     );
                   },
                   icon: const Icon(Icons.share_outlined),

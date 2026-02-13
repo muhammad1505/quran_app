@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:quran/quran.dart' as quran;
+import 'package:alfurqan/alfurqan.dart';
 
 import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/audio_cache_service.dart';
@@ -14,8 +14,7 @@ class MurotalDownloadPage extends StatefulWidget {
 }
 
 class _MurotalDownloadPageState extends State<MurotalDownloadPage> {
-  final AudioSettingsController _audioSettings =
-      AudioSettingsController.instance;
+  late final AudioSettingsController _audioSettings;
   String _selectedQariId = 'alafasy';
   Set<int> _downloadedSurahs = {};
   final Set<int> _busySurahs = {};
@@ -25,6 +24,7 @@ class _MurotalDownloadPageState extends State<MurotalDownloadPage> {
   @override
   void initState() {
     super.initState();
+    _audioSettings = getIt<AudioSettingsController>();
     _audioSettings.addListener(_syncQari);
     _audioSettings.load();
     _selectedQariId = _audioSettings.value.qariId;
@@ -212,11 +212,11 @@ class _MurotalDownloadPageState extends State<MurotalDownloadPage> {
                             ),
                           ),
                           title: Text(
-                            quran.getSurahName(surahNumber),
+                            AlQuran.chapter(surahNumber).nameSimple,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
-                            quran.getSurahNameArabic(surahNumber),
+                            AlQuran.chapter(surahNumber).nameArabic,
                             style: GoogleFonts.amiri(fontSize: 18),
                           ),
                           trailing: busy

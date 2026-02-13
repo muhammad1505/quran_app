@@ -1,11 +1,10 @@
 import 'dart:convert';
 
+import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+@lazySingleton
 class DoaFavoriteService {
-  DoaFavoriteService._();
-
-  static final DoaFavoriteService instance = DoaFavoriteService._();
   static const _storageKey = 'doa_favorites';
 
   Future<Set<String>> getFavorites() async {

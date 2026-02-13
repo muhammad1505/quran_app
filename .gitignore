@@ -55,3 +55,6 @@
 **/ios/Flutter/app.flx
 **/ios/Flutter/app.zip
 **/ios/ServiceDefinitions.json
+
+.gemini/
+gha-creds-*.json

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/asmaul_husna_service.dart';
 import 'package:quran_app/core/services/tts_service.dart';
 import 'package:quran_app/features/asmaul_husna/presentation/pages/asmaul_detail_page.dart';
@@ -17,17 +18,27 @@ class _AsmaulHusnaPageState extends State<AsmaulHusnaPage> {
   bool _isPlayingAll = false;
   bool _stopRequested = false;
 
+  late final TtsService _ttsService;
+  late final AsmaulHusnaService _asmaulHusnaService;
+
+  @override
+  void initState() {
+    super.initState();
+    _ttsService = getIt<TtsService>();
+    _asmaulHusnaService = getIt<AsmaulHusnaService>();
+  }
+
   @override
   void dispose() {
     _stopRequested = true;
-    TtsService.instance.stop();
+    _ttsService.stop();
     super.dispose();
   }
 
   Future<void> _togglePlayAll(List<AsmaulHusnaItem> items) async {
     if (_isPlayingAll) {
       _stopRequested = true;
-      await TtsService.instance.stop();
+      await _ttsService.stop();
       if (mounted) {
         setState(() => _isPlayingAll = false);
       }
@@ -42,7 +53,7 @@ class _AsmaulHusnaPageState extends State<AsmaulHusnaPage> {
       final meaning = _showEnglish ? item.meaningEn : item.meaningId;
       final text =
           meaning.isNotEmpty ? '${item.transliteration}. $meaning' : item.transliteration;
-      await TtsService.instance.speak(
+      await _ttsService.speak(
         text,
         language: _showEnglish ? 'en-US' : 'id-ID',
       );
@@ -57,7 +68,7 @@ class _AsmaulHusnaPageState extends State<AsmaulHusnaPage> {
     return Scaffold(
       appBar: AppBar(title: const Text("Asmaul Husna")),
       body: FutureBuilder<List<AsmaulHusnaItem>>(
-        future: AsmaulHusnaService.instance.load(),
+        future: _asmaulHusnaService.load(),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());

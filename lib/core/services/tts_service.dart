@@ -1,10 +1,8 @@
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:injectable/injectable.dart';
 
+@lazySingleton
 class TtsService {
-  TtsService._();
-
-  static final TtsService instance = TtsService._();
-
   final FlutterTts _tts = FlutterTts();
   bool _initialized = false;
 

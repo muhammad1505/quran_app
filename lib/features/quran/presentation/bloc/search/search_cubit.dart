@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
-import 'package:quran/quran.dart' as quran;
-import 'package:quran_app/core/services/translation_service.dart';
+import 'package:quran_app/core/services/translation_asset_service.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 import 'package:alfurqan/alfurqan.dart';
 import 'package:alfurqan/constant.dart';
@@ -14,11 +13,12 @@ part 'search_state.dart';
 @injectable
 class SearchCubit extends Cubit<SearchState> {
   final QuranSettingsController _quranSettings;
+  final TranslationAssetService _translationAssetService;
   Timer? _searchDebounce;
   Map<String, String>? _translationSearchMap;
   TranslationSource? _translationSearchSource;
 
-  SearchCubit(this._quranSettings)
+  SearchCubit(this._quranSettings, this._translationAssetService)
       : super(SearchInitial(List<int>.generate(114, (i) => i + 1)));
 
   void search(String query) {
@@ -52,7 +52,7 @@ class SearchCubit extends Cubit<SearchState> {
 
   Set<int> _getSurahNameMatches(String normalized) {
     return List<int>.generate(114, (i) => i + 1).where((surah) {
-      final name = quran.getSurahName(surah).toLowerCase();
+      final name = AlQuran.chapter(surah).nameSimple.toLowerCase();
       return name.contains(normalized) || surah.toString() == normalized;
     }).toSet();
   }
@@ -60,12 +60,12 @@ class SearchCubit extends Cubit<SearchState> {
   Future<Set<int>> _searchTranslations(String query) async {
     final normalized = query.toLowerCase();
     final source = _quranSettings.value.translation;
-    final needsAsset = TranslationAssetService.instance.requiresAsset(source);
+    final needsAsset = _translationAssetService.requiresAsset(source);
     Map<String, String>? map;
 
     if (needsAsset) {
       if (_translationSearchSource != source || _translationSearchMap == null) {
-        map = await TranslationAssetService.instance.load(source);
+        map = await _translationAssetService.load(source);
         _translationSearchMap = map;
         _translationSearchSource = source;
       } else {
@@ -85,7 +85,7 @@ class SearchCubit extends Cubit<SearchState> {
       }
     } else {
       for (var surah = 1; surah <= 114; surah++) {
-        final verses = quran.getVerseCount(surah);
+        final verses = AlQuran.chapter(surah).versesCount;
         for (var ayah = 1; ayah <= verses; ayah++) {
           final translation = _translationForSearch(source, surah, ayah);
           if (translation.toLowerCase().contains(normalized)) {
@@ -103,18 +103,9 @@ class SearchCubit extends Cubit<SearchState> {
     int surah,
     int ayah,
   ) {
-    if (TranslationAssetService.instance.requiresAsset(source) &&
+    if (_translationAssetService.requiresAsset(source) &&
         _translationSearchMap != null) {
       return _sanitizeTranslation(_translationSearchMap!['$surah:$ayah'] ?? '');
-    }
-    if (source == TranslationSource.enSaheeh) {
-      return _sanitizeTranslation(
-        quran.getVerseTranslation(
-          surah,
-          ayah,
-          translation: quran.Translation.enSaheeh,
-        ),
-      );
     }
     final verseKey = '$surah:$ayah';
     return _sanitizeTranslation(

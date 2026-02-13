@@ -19,8 +19,9 @@ class OfflineManagerPage extends StatefulWidget {
 }
 
 class _OfflineManagerPageState extends State<OfflineManagerPage> {
-  final AudioSettingsController _audioSettings =
-      AudioSettingsController.instance;
+  late final AudioSettingsController _audioSettings;
+  late final TafsirService _tafsirService;
+  late final TranslationService _translationService;
   int _downloadedCount = 0;
   String _audioSizeLabel = '-';
   bool _tafsirAvailable = false;
@@ -33,6 +34,9 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
   @override
   void initState() {
     super.initState();
+    _audioSettings = getIt<AudioSettingsController>();
+    _tafsirService = getIt<TafsirService>();
+    _translationService = getIt<TranslationService>();
     _audioSettings.addListener(_refresh);
     _audioSettings.load();
     _refresh();
@@ -50,8 +54,8 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
     final downloaded =
         await getIt<AudioCacheService>().listDownloadedSurahs(qariId);
     final audioSize = await _calculateAudioSize(qariId);
-    final tafsirReady = await TafsirService.instance.hasOfflineData();
-    final tafsirCache = await TafsirService.instance
+    final tafsirReady = await _tafsirService.hasOfflineData();
+    final tafsirCache = await _tafsirService
         .getCacheInfo(getIt<QuranSettingsController>().value.tafsirSource);
     if (!mounted) return;
     setState(() {
@@ -244,9 +248,9 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
   _TranslationStatus _translationStatus() {
     const kemenagAvailable = true;
     final kingFahadAvailable =
-        TranslationAssetService.instance.requiresAsset(TranslationSource.idKingFahad);
+        _translationService.requiresAsset(TranslationSource.idKingFahad);
     final sabiqAvailable =
-        TranslationAssetService.instance.requiresAsset(TranslationSource.idSabiq);
+        _translationService.requiresAsset(TranslationSource.idSabiq);
     return _TranslationStatus(
       kemenag: 'Tersedia offline',
       kingFahad: kingFahadAvailable ? 'Tersedia offline' : 'Tidak ditemukan',
@@ -284,7 +288,7 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
     });
     try {
       for (var surah = 1; surah <= 114; surah++) {
-        await TafsirService.instance.downloadSurah(source, surah);
+        await _tafsirService.downloadSurah(source, surah);
         if (!mounted) return;
         setState(() {
           _tafsirProgress = surah / 114;
@@ -305,7 +309,7 @@ class _OfflineManagerPageState extends State<OfflineManagerPage> {
   }
 
   Future<void> _clearTafsirCache(TafsirSource source) async {
-    await TafsirService.instance.clearCache(source);
+    await _tafsirService.clearCache(source);
     await _refresh();
   }
 }

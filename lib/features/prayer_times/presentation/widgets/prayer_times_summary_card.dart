@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/settings/prayer_settings.dart';
 import 'package:quran_app/features/prayer_times/presentation/pages/prayer_times_page.dart';
 
@@ -32,7 +33,7 @@ class _PrayerTimesSummaryCardState extends State<PrayerTimesSummaryCard> {
   String? _manualLocationName;
   Timer? _ticker;
   final PrayerSettingsController _prayerSettings =
-      PrayerSettingsController.instance;
+      getIt<PrayerSettingsController>();
 
   @override
   void initState() {

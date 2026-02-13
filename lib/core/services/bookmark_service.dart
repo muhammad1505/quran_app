@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class BookmarkItem {
@@ -78,10 +79,8 @@ class BookmarkFolder {
   }
 }
 
+@lazySingleton
 class BookmarkService {
-  BookmarkService._();
-
-  static final BookmarkService instance = BookmarkService._();
   static const _storageKey = 'bookmarks';
   static const _folderKey = 'bookmark_folders';
 

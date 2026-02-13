@@ -37,7 +37,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
   String? _warningMessage;
   Coordinates? _coordinates;
   final PrayerSettingsController _prayerSettings =
-      PrayerSettingsController.instance;
+      getIt<PrayerSettingsController>();
   Timer? _ticker;
   ScheduleView _view = ScheduleView.today;
 
@@ -158,7 +158,6 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       _isRefreshing = false;
     });
     _updateCountdown();
-    await _scheduleNotificationsIfEnabled(prayerTimes, coordinates, params);
   }
 
   Future<_ManualLocation?> _loadManualLocation() async {
@@ -208,28 +207,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     );
   }
 
-  Future<void> _scheduleNotificationsIfEnabled(
-    PrayerTimes today,
-    Coordinates coordinates,
-    CalculationParameters params,
-  ) async {
-    final prefs = await SharedPreferences.getInstance();
-    final enabled = prefs.getBool('notifications') ?? true;
-    if (!enabled) {
-      await getIt<PrayerNotificationService>().cancelAll();
-      return;
-    }
-    final tomorrow = PrayerTimes(
-      coordinates,
-      DateComponents.from(DateTime.now().add(const Duration(days: 1))),
-      params,
-    );
-    await getIt<PrayerNotificationService>().schedulePrayerTimes(
-      today,
-      tomorrow,
-      _prayerSettings.value,
-    );
-  }
+
 
   _NextPrayerInfo _resolveNextPrayer(
     PrayerTimes prayerTimes,
@@ -282,13 +260,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     return time.add(Duration(minutes: minutes));
   }
 
-  Future<void> _refreshPrayerNotifications() async {
-    final coords = _coordinates;
-    final prayerTimes = _prayerTimes;
-    if (coords == null || prayerTimes == null) return;
-    final params = _prayerSettings.buildParameters();
-    await _scheduleNotificationsIfEnabled(prayerTimes, coords, params);
-  }
+
 
   Future<void> _storeLastLocation(Position position) async {
     final prefs = await SharedPreferences.getInstance();
@@ -760,7 +732,6 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                 value: _prayerSettings.value.silentMode,
                 onChanged: (value) async {
                   await _prayerSettings.setSilentMode(value);
-                  await _refreshPrayerNotifications();
                 },
               ),
             ],
@@ -814,7 +785,6 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                               .updateCorrectionMinutes(temp.toInt());
                           if (!mounted) return;
                           navigator.pop();
-                          await _refreshPrayerNotifications();
                         },
                         child: const Text('Simpan'),
                       ),
@@ -848,7 +818,6 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                     Prayer.fajr,
                     value,
                   );
-                  await _refreshPrayerNotifications();
                 },
               ),
               SwitchListTile(
@@ -859,7 +828,6 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                     Prayer.dhuhr,
                     value,
                   );
-                  await _refreshPrayerNotifications();
                 },
               ),
               SwitchListTile(
@@ -870,7 +838,6 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                     Prayer.asr,
                     value,
                   );
-                  await _refreshPrayerNotifications();
                 },
               ),
               SwitchListTile(
@@ -881,7 +848,6 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                     Prayer.maghrib,
                     value,
                   );
-                  await _refreshPrayerNotifications();
                 },
               ),
               SwitchListTile(
@@ -892,7 +858,6 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                     Prayer.isha,
                     value,
                   );
-                  await _refreshPrayerNotifications();
                 },
               ),
               const SizedBox(height: 8),

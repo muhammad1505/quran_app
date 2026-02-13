@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:quran/quran.dart' as quran;
 import 'package:quran_app/core/services/bookmark_service.dart';
 import 'package:quran_app/core/services/last_read_service.dart';
 import 'package:quran_app/core/services/translation_service.dart';
@@ -16,11 +15,17 @@ part 'home_state.dart';
 
 @injectable
 class HomeCubit extends Cubit<HomeState> {
-  final LastReadService _lastReadService = LastReadService.instance;
-  final BookmarkService _bookmarkService = BookmarkService.instance;
-  final QuranSettingsController _quranSettings = getIt<QuranSettingsController>();
+  final LastReadService _lastReadService;
+  final BookmarkService _bookmarkService;
+  final QuranSettingsController _quranSettings;
+  final TranslationService _translationService;
 
-  HomeCubit() : super(HomeLoading());
+  HomeCubit(
+    this._lastReadService,
+    this._bookmarkService,
+    this._quranSettings,
+    this._translationService,
+  ) : super(HomeLoading());
 
   Future<void> fetchInitialData() async {
     try {
@@ -52,11 +57,11 @@ class HomeCubit extends Cubit<HomeState> {
 
       final now = DateTime.now();
       final dayIndex = now.difference(DateTime(now.year, 1, 1)).inDays;
-      final surah = (dayIndex % 114) + 1;
-      final verseCount = quran.getVerseCount(surah);
-      final ayah = (dayIndex % verseCount) + 1;
-      final arabic = quran.getVerse(surah, ayah);
-      final translation = await _resolveTranslation(
+      final surah = (dayIndex % 114).toInt() + 1;
+      final verseCount = AlQuran.chapter(surah).versesCount;
+      final ayah = (dayIndex % verseCount).toInt() + 1;
+      final arabic = AlQuran.verse(surah, ayah).text;
+      final translation = await _translationService.getTranslation(
         _quranSettings.value.translation,
         surah,
         ayah,
@@ -114,55 +119,5 @@ class HomeCubit extends Cubit<HomeState> {
       return 'Aktifkan lokasi untuk akurasi';
     }
     return 'Koordinat ${lat.toStringAsFixed(2)}, ${lng.toStringAsFixed(2)}';
-  }
-
-  Future<String> _resolveTranslation(
-    TranslationSource source,
-    int surah,
-    int ayah,
-  ) async {
-    if (TranslationAssetService.instance.requiresAsset(source)) {
-      final map = await TranslationAssetService.instance.load(source);
-      return _sanitizeTranslation(map['$surah:$ayah'] ?? '');
-    }
-    if (source == TranslationSource.enSaheeh) {
-      return _sanitizeTranslation(
-        quran.getVerseTranslation(
-          surah,
-          ayah,
-          translation: quran.Translation.enSaheeh,
-        ),
-      );
-    }
-    final verseKey = '$surah:$ayah';
-    return _sanitizeTranslation(
-      AlQuran.translation(
-        _translationType(source),
-        verseKey,
-      ).text,
-    );
-  }
-
-  TranslationType _translationType(TranslationSource source) {
-    switch (source) {
-      case TranslationSource.idKemenag:
-      case TranslationSource.idKingFahad:
-      case TranslationSource.idSabiq:
-        return TranslationType.idIndonesianIslamicAffairsMinistry;
-      case TranslationSource.enAbdelHaleem:
-      case TranslationSource.enSaheeh:
-        return TranslationType.enMASAbdelHaleem;
-    }
-  }
-
-  String _sanitizeTranslation(String input) {
-    return input
-        .replaceAll(RegExp(r'<[^>]*>'), '')
-        .replaceAll('&quot;', '"')
-        .replaceAll('&apos;', "'")
-        .replaceAll('&nbsp;', ' ')
-        .replaceAll('&#39;', "'")
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
   }
 }

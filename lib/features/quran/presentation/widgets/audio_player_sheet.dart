@@ -1,17 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:quran/quran.dart' as quran;
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/features/quran/presentation/bloc/audio/quran_audio_cubit.dart';
 import 'package:quran_app/features/quran/presentation/bloc/audio/quran_audio_state.dart';
+import 'package:alfurqan/alfurqan.dart';
 
-class QuranAudioPlayerSheet extends StatelessWidget {
+class QuranAudioPlayerSheet extends StatefulWidget {
   const QuranAudioPlayerSheet({super.key});
+
+  @override
+  State<QuranAudioPlayerSheet> createState() => _QuranAudioPlayerSheetState();
+}
+
+class _QuranAudioPlayerSheetState extends State<QuranAudioPlayerSheet> {
+  late final AudioSettingsController _audioSettings;
+
+  @override
+  void initState() {
+    super.initState();
+    _audioSettings = getIt<AudioSettingsController>();
+  }
 
   @override
   Widget build(BuildContext context) {
     final cubit = context.watch<QuranAudioCubit>();
-    final audioSettings = AudioSettingsController.instance;
 
     return BlocBuilder<QuranAudioCubit, QuranAudioState>(
       builder: (context, state) {
@@ -48,9 +61,9 @@ class QuranAudioPlayerSheet extends StatelessWidget {
         }
 
         if (isAyahMode && currentAyah != null) {
-          title = 'Ayat $currentAyah • ${quran.getSurahName(surahNumber)}';
+          title = 'Ayat $currentAyah • ${AlQuran.chapter(surahNumber).nameSimple}';
         } else {
-          title = 'Murotal ${quran.getSurahName(surahNumber)}';
+          title = 'Murotal ${AlQuran.chapter(surahNumber).nameSimple}';
         }
 
         return SafeArea(
@@ -177,7 +190,7 @@ class QuranAudioPlayerSheet extends StatelessWidget {
                                 Theme.of(context).primaryColor.withAlpha((255 * 0.1).round()),
                           ),
                           child: Text(
-                            '${audioSettings.value.playbackSpeed.toStringAsFixed(2).replaceAll('.00', '')}x',
+                            '${_audioSettings.value.playbackSpeed.toStringAsFixed(2).replaceAll('.00', '')}x',
                             style: TextStyle(
                               color: Theme.of(context).primaryColor,
                             ),

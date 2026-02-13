@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:quran/quran.dart' as quran;
+import 'package:alfurqan/alfurqan.dart';
 
 import 'package:quran_app/core/services/tafsir_service.dart';
 import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 
-class TafsirPage extends StatelessWidget {
+class TafsirPage extends StatefulWidget {
   final int surahNumber;
   final int verseNumber;
   final String arabic;
@@ -23,13 +23,26 @@ class TafsirPage extends StatelessWidget {
   });
 
   @override
+  State<TafsirPage> createState() => _TafsirPageState();
+}
+
+class _TafsirPageState extends State<TafsirPage> {
+  late final TafsirService _tafsirService;
+
+  @override
+  void initState() {
+    super.initState();
+    _tafsirService = getIt<TafsirService>();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final title =
-        '${quran.getSurahName(surahNumber)} : $verseNumber';
+        '${AlQuran.chapter(widget.surahNumber).nameSimple} : ${widget.verseNumber}';
     final settings = getIt<QuranSettingsController>().value;
-    final future = TafsirService.instance.getTafsir(
-      surah: surahNumber,
-      ayah: verseNumber,
+    final future = _tafsirService.getTafsir(
+      surah: widget.surahNumber,
+      ayah: widget.verseNumber,
       source: settings.tafsirSource,
     );
     return DefaultTabController(
@@ -54,9 +67,9 @@ class TafsirPage extends StatelessWidget {
                 }
                 if (snapshot.hasError) {
                   return _TafsirSection(
-                    arabic: arabic,
-                    transliteration: transliteration,
-                    content: translation,
+                    arabic: widget.arabic,
+                    transliteration: widget.transliteration,
+                    content: widget.translation,
                     sourceLabel: 'Gagal memuat tafsir. Menampilkan terjemahan.',
                   );
                 }
@@ -65,12 +78,12 @@ class TafsirPage extends StatelessWidget {
                     ? entry!.short!
                     : (entry?.long?.isNotEmpty == true
                         ? entry!.long!
-                        : translation);
+                        : widget.translation);
                 final label = entry?.sourceLabel ??
                     'Terjemahan sebagai ringkasan tafsir';
                 return _TafsirSection(
-                  arabic: arabic,
-                  transliteration: transliteration,
+                  arabic: widget.arabic,
+                  transliteration: widget.transliteration,
                   content: content,
                   sourceLabel: label,
                 );
@@ -84,8 +97,8 @@ class TafsirPage extends StatelessWidget {
                 }
                 if (snapshot.hasError) {
                   return _TafsirSection(
-                    arabic: arabic,
-                    transliteration: transliteration,
+                    arabic: widget.arabic,
+                    transliteration: widget.transliteration,
                     content: 'Gagal memuat tafsir lengkap.',
                     sourceLabel: 'Periksa koneksi atau pilih sumber lain.',
                   );
@@ -99,8 +112,8 @@ class TafsirPage extends StatelessWidget {
                 final label = entry?.sourceLabel ??
                     'Tambahkan tafsir offline atau pilih sumber online.';
                 return _TafsirSection(
-                  arabic: arabic,
-                  transliteration: transliteration,
+                  arabic: widget.arabic,
+                  transliteration: widget.transliteration,
                   content: content,
                   sourceLabel: label,
                 );
