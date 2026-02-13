@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/prayer_notification_service.dart';
-import 'package:quran_app/main.dart';
+import 'package:quran_app/features/home/presentation/pages/dashboard_page.dart';
 
 class OnboardingNotificationPage extends StatefulWidget {
   const OnboardingNotificationPage({super.key});

@@ -5,6 +5,8 @@ import 'package:get_it/get_it.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/main.dart';
+import 'package:quran_app/features/splash/presentation/pages/splash_page.dart';
+import 'package:quran_app/features/home/presentation/pages/dashboard_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
