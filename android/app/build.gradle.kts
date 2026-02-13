@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -16,8 +18,10 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+    kotlin {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        }
     }
 
     // Release signing configuration
@@ -25,13 +29,13 @@ android {
     val signingRelease = if (keystorePropertiesFile.exists()) {
         println("Found key.properties at: ${keystorePropertiesFile.absolutePath}")
         try {
-            val props = java.util.Properties().apply { load(keystorePropertiesFile.inputStream()) }
+            val props = Properties().apply { load(keystorePropertiesFile.inputStream()) }
             println("Loaded properties: storeFile=${props["storeFile"]}, keyAlias=${props["keyAlias"]}")
             signingConfigs.create("release") {
-                storeFile = file(props["storeFile"] as String)
-                storePassword = props["storePassword"] as String
-                keyAlias = props["keyAlias"] as String
-                keyPassword = props["storePassword"] as String
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("storePassword")
             }
         } catch (e: Exception) {
             println("❌ Error loading release signing config: ${e.message}")
