@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/asmaul_husna_service.dart';
 import 'package:quran_app/core/services/doa_favorite_service.dart';
@@ -226,6 +227,7 @@ class _DoaPageState extends State<DoaPage> {
   late final TtsService _ttsService;
   late final DoaFavoriteService _doaFavoriteService;
   late final AsmaulHusnaService _asmaulHusnaService;
+  late final AudioPlayer _audioPlayer;
 
   String _selectedCategory = 'Semua';
   Set<String> _favoriteIds = {};
@@ -240,6 +242,7 @@ class _DoaPageState extends State<DoaPage> {
     _ttsService = getIt<TtsService>();
     _doaFavoriteService = getIt<DoaFavoriteService>();
     _asmaulHusnaService = getIt<AsmaulHusnaService>();
+    _audioPlayer = AudioPlayer();
     _loadFavorites();
   }
 
@@ -247,6 +250,7 @@ class _DoaPageState extends State<DoaPage> {
   void dispose() {
     _stopAsmaulRequested = true;
     _ttsService.stop();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -290,7 +294,7 @@ class _DoaPageState extends State<DoaPage> {
   Future<void> _toggleAsmaulPlayAll(List<AsmaulHusnaItem> items) async {
     if (_isAsmaulPlayingAll) {
       _stopAsmaulRequested = true;
-      await _ttsService.stop();
+      await _audioPlayer.stop();
       if (mounted) {
         setState(() => _isAsmaulPlayingAll = false);
       }
@@ -300,13 +304,27 @@ class _DoaPageState extends State<DoaPage> {
       _isAsmaulPlayingAll = true;
       _stopAsmaulRequested = false;
     });
+
     for (final item in items) {
       if (_stopAsmaulRequested) break;
-      final text = item.meaningId.isNotEmpty
-          ? '${item.transliteration}. ${item.meaningId}'
-          : item.transliteration;
-      await _ttsService.speak(text, language: 'id-ID');
+      final url =
+          'https://cdn.islamic.network/asmaul-husna/audio/${item.number}.mp3';
+      try {
+        await _audioPlayer.setUrl(url);
+        await _audioPlayer.play();
+        await _audioPlayer.processingStateStream
+            .firstWhere((state) => state == ProcessingState.completed);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('Gagal memutar audio: ${item.transliteration}')),
+          );
+        }
+        break;
+      }
     }
+
     if (mounted) {
       setState(() => _isAsmaulPlayingAll = false);
     }

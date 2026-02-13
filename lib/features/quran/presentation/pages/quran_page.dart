@@ -1457,73 +1457,85 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                       );
                     }
                   
-                    Widget _buildShareCard({
-                      required int verseNumber,
-                      required String arabic,
-                      required String translation,
-                      required String transliteration,
-                    }) {
-                      final theme = Theme.of(context);
-                      final cleanArabic = _sanitizeTranslation(arabic);
-                      final title =
-                          'QS. ${quran.getSurahName(widget.surahNumber)} : $verseNumber';
-                      return Container(
-                        width: 320,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withAlpha(20),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.withAlpha(51)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: theme.primaryColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              cleanArabic,
-                              textAlign: TextAlign.right,
-                              style: _arabicTextStyle(_quranSettings.value, theme).copyWith(
-                                fontSize: 24,
-                              ),
-                            ),
-                            if (transliteration.isNotEmpty) ...[
-                              const SizedBox(height: 8),
+                      Widget _buildShareCard({
+                        required int verseNumber,
+                        required String arabic,
+                        required String translation,
+                        required String transliteration,
+                      }) {
+                        // Using a light theme for the share card regardless of app theme
+                        const primaryColor = Color(0xFF00897B);
+                        const textColor = Colors.black;
+                        const secondaryTextColor = Colors.black54;
+                    
+                        final cleanArabic = _sanitizeTranslation(arabic);
+                        final title =
+                            'QS. ${quran.getSurahName(widget.surahNumber)} : $verseNumber';
+                        return Container(
+                          width: 320,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey.withAlpha(51)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                transliteration,
-                                style: GoogleFonts.notoSans(
+                                title,
+                                style: GoogleFonts.poppins(
                                   fontSize: 12,
-                                  color: theme.textTheme.bodyMedium?.color,
+                                  color: primaryColor,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ],
-                            const SizedBox(height: 8),
-                            Text(
-                              translation,
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Icon(Icons.auto_awesome, size: 16, color: theme.primaryColor),
-                                const SizedBox(width: 6),
+                              const SizedBox(height: 12),
+                              Text(
+                                cleanArabic,
+                                textAlign: TextAlign.right,
+                                style: _arabicTextStyle(_quranSettings.value, Theme.of(context))
+                                    .copyWith(
+                                  fontSize: 24,
+                                  color: textColor,
+                                ),
+                              ),
+                              if (transliteration.isNotEmpty) ...[
+                                const SizedBox(height: 8),
                                 Text(
-                                  "Al-Quran Terjemahan",
-                                  style: theme.textTheme.labelMedium,
+                                  transliteration,
+                                  style: GoogleFonts.notoSans(
+                                    fontSize: 12,
+                                    color: secondaryTextColor,
+                                  ),
                                 ),
                               ],
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                  
+                              const SizedBox(height: 8),
+                              Text(
+                                translation,
+                                style: GoogleFonts.poppins(
+                                  color: textColor,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  const Icon(Icons.auto_awesome, size: 16, color: primaryColor),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "Al-Quran Terjemahan",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: secondaryTextColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }                  
                       Future<void> _captureAndShare(
                         GlobalKey boundaryKey, {
                         required String fileName,

@@ -4,6 +4,8 @@ import 'dart:ui';
 
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:quran_app/core/services/background_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/settings/theme_settings.dart';
@@ -14,6 +16,8 @@ import 'package:quran_app/core/di/injection.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('id_ID', null);
+  Intl.defaultLocale = 'id_ID';
   await AndroidAlarmManager.initialize();
 
   // Global error handling for production

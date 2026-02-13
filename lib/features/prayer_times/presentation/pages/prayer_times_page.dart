@@ -443,7 +443,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              DateFormat('EEE, d MMM y').format(schedule.date),
+              DateFormat('EEE, d MMM y', 'id_ID').format(schedule.date),
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -466,7 +466,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
 
   Widget _timeChip(String label, DateTime time) {
     return Chip(
-      label: Text('$label ${DateFormat.Hm().format(time)}'),
+      label: Text('$label ${DateFormat.Hm('id_ID').format(time)}'),
       backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
     );
   }
@@ -502,7 +502,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
             ],
           ),
           Text(
-            DateFormat.Hm().format(time),
+            DateFormat.Hm('id_ID').format(time),
             style: GoogleFonts.poppins(
               fontSize: 18, 
               fontWeight: FontWeight.bold,
@@ -519,7 +519,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
         ? _getPrayerName(_nextPrayer!)
         : "Selesai";
     final nextTimeLabel = _nextPrayerTime != null
-        ? DateFormat.Hm().format(_nextPrayerTime!)
+        ? DateFormat.Hm('id_ID').format(_nextPrayerTime!)
         : "--:--";
     final remaining = _formatDuration(_timeRemaining);
     return Container(
@@ -551,7 +551,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      DateFormat('EEEE, d MMMM y').format(DateTime.now()),
+                      DateFormat('EEEE, d MMMM y', 'id_ID').format(DateTime.now()),
                       style: GoogleFonts.poppins(
                         color: Colors.white70,
                         fontSize: 13,
