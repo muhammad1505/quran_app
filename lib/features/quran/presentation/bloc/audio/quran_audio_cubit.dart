@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import 'package:just_audio/just_audio.dart';
@@ -11,10 +13,14 @@ class QuranAudioCubit extends Cubit<QuranAudioState> {
   final AudioCacheService _audioCacheService;
   final AudioSettingsController _audioSettings = AudioSettingsController.instance;
   final AudioPlayer _player = AudioPlayer();
+  
+  // Stream subscriptions for proper cleanup
+  StreamSubscription<PlayerState>? _playerStateSubscription;
+  StreamSubscription<Duration>? _positionSubscription;
 
   QuranAudioCubit(this._audioCacheService) : super(QuranAudioInitial()) {
-    _player.playerStateStream.listen(_onPlayerStateChanged);
-    _player.positionStream.listen(_onPositionChanged);
+    _playerStateSubscription = _player.playerStateStream.listen(_onPlayerStateChanged);
+    _positionSubscription = _player.positionStream.listen(_onPositionChanged);
     _audioSettings.addListener(_onAudioSettingsChanged);
   }
 
@@ -228,9 +234,11 @@ class QuranAudioCubit extends Cubit<QuranAudioState> {
   }
 
   @override
-  Future<void> close() {
+  Future<void> close() async {
+    await _playerStateSubscription?.cancel();
+    await _positionSubscription?.cancel();
     _audioSettings.removeListener(_onAudioSettingsChanged);
-    _player.dispose();
+    await _player.dispose();
     return super.close();
   }
 }
