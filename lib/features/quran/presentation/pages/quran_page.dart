@@ -1133,7 +1133,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                                                 onTap: () {
                   final navigator = Navigator.of(context);
                   final messenger = ScaffoldMessenger.of(context);
-                  Clipboard.setData(ClipboardData(text: arabic)).then((_) {
+                  Clipboard.setData(ClipboardData(text: arabic.replaceAll(RegExp(r'<[^>]+>'), ''))).then((_) {
                     if (!mounted) return;
                     navigator.pop();
                     messenger.showSnackBar(
@@ -1431,6 +1431,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     required String transliteration,
   }) {
     final theme = Theme.of(context);
+    final cleanArabic = arabic.replaceAll(RegExp(r'<[^>]+>'), '');
     final title =
         'QS. ${quran.getSurahName(widget.surahNumber)} : $verseNumber';
     return Container(
@@ -1453,7 +1454,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
           ),
           const SizedBox(height: 12),
           Text(
-            arabic,
+            cleanArabic,
             textAlign: TextAlign.right,
             style: _arabicTextStyle(_quranSettings.value, theme).copyWith(
               fontSize: 24,
@@ -1539,13 +1540,9 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
           [XFile(file.path)],
           text: subject,
         );
-      } catch (e) {
-        // Abaikan error spesifik share sheet yang sering terjadi tapi tidak fatal
-        if (e.toString().contains('LateInitializationError') ||
-            e.toString().contains('localResult')) {
-          return;
-        }
-        rethrow;
+      } catch (_) {
+        // share_plus may throw after the share sheet closes; this is non-fatal.
+        return;
       }
     } catch (e) {
       if (!mounted) return;
