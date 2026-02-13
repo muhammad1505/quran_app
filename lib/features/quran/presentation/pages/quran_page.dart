@@ -1374,6 +1374,27 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     );
   }
 
+  void _shareAsText({
+    required int verseNumber,
+    required String arabic,
+    required String translation,
+    required String transliteration,
+  }) {
+    final cleanArabic = arabic.replaceAll(RegExp(r'<[^>]+>'), '');
+    final surahName = quran.getSurahName(widget.surahNumber);
+    final buffer = StringBuffer()
+      ..writeln(cleanArabic)
+      ..writeln();
+    if (transliteration.isNotEmpty) {
+      buffer..writeln(transliteration)..writeln();
+    }
+    buffer
+      ..writeln(translation)
+      ..writeln()
+      ..writeln('— QS. $surahName : $verseNumber');
+    Share.share(buffer.toString().trim());
+  }
+
   void _showShareDialog({
     required int verseNumber,
     required String arabic,
@@ -1402,8 +1423,20 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
               onPressed: () => Navigator.pop(context),
               child: const Text('Batal'),
             ),
+            OutlinedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _shareAsText(
+                  verseNumber: verseNumber,
+                  arabic: arabic,
+                  translation: translation,
+                  transliteration: transliteration,
+                );
+              },
+              child: const Text('Teks'),
+            ),
             ElevatedButton(
-                                                      onPressed: () {
+              onPressed: () {
                 final navigator = Navigator.of(context);
                 _captureAndShare(
                   boundaryKey,
@@ -1416,7 +1449,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                   navigator.pop();
                 });
               },
-              child: const Text('Bagikan'),
+              child: const Text('Gambar'),
             ),
           ],
         );
@@ -1464,7 +1497,10 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
             const SizedBox(height: 8),
             Text(
               transliteration,
-              style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
+              style: GoogleFonts.notoSans(
+                fontSize: 12,
+                color: theme.textTheme.bodyMedium?.color,
+              ),
             ),
           ],
           const SizedBox(height: 8),
@@ -1809,7 +1845,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                                 padding: const EdgeInsets.only(top: 12),
                                 child: Text(
                                   transliterationText,
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.notoSans(
                                     fontSize: math.max(
                                       12,
                                       settings.translationFontSize - 2,
