@@ -1133,763 +1133,744 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                                                 onTap: () {
                   final navigator = Navigator.of(context);
                   final messenger = ScaffoldMessenger.of(context);
-                  Clipboard.setData(ClipboardData(text: arabic.replaceAll(RegExp(r'<[^>]+>'), ''))).then((_) {
-                    if (!mounted) return;
-                    navigator.pop();
-                    messenger.showSnackBar(
-                      const SnackBar(content: Text('Teks Arab disalin.')),
-                    );
-                  });
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.copy),
-                title: const Text('Salin terjemahan'),
-                                                onTap: () {
-                  final navigator = Navigator.of(context);
-                  final messenger = ScaffoldMessenger.of(context);
-                  Clipboard.setData(ClipboardData(text: translation)).then((_) {
-                    if (!mounted) return;
-                    navigator.pop();
-                    messenger.showSnackBar(
-                      const SnackBar(content: Text('Terjemahan disalin.')),
-                    );
-                  });
-                },
-              ),
-              if (transliteration.isNotEmpty)
-                ListTile(
-                  leading: const Icon(Icons.text_fields),
-                  title: const Text('Salin transliterasi'),
-                                                      onTap: () {
-                    final navigator = Navigator.of(context);
-                    final messenger = ScaffoldMessenger.of(context);
-                    Clipboard.setData(
-                      ClipboardData(text: transliteration),
-                    ).then((_) {
-                      if (!mounted) return;
-                      navigator.pop();
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Transliterasi disalin.'),
-                        ),
-                      );
-                    });
-                  },
-                ),
-              ListTile(
-                leading: const Icon(Icons.share_outlined),
-                title: const Text('Bagikan ayat'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showShareDialog(
-                    verseNumber: verseNumber,
-                    arabic: arabic,
-                    translation: translation,
-                    transliteration: transliteration,
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.menu_book_outlined),
-                title: const Text('Tafsir ringkas'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => TafsirPage(
-                        surahNumber: widget.surahNumber,
-                        verseNumber: verseNumber,
-                        arabic: arabic,
-                        translation: translation,
-                        transliteration: transliteration,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  'Surah ${widget.surahNumber} • Ayat $verseNumber',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showNoteDialog(int verseNumber) {
-    final controller = TextEditingController();
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Catatan Ayat'),
-          content: TextField(
-            controller: controller,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'Tulis catatan singkat...',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-                            onPressed: () {
-                final navigator = Navigator.of(context);
-                final note = controller.text.trim();
-                if (note.isNotEmpty) {
-                  getIt<BookmarkService>().saveNote(
-                    surah: widget.surahNumber,
-                    ayah: verseNumber,
-                    note: note,
-                  ).then((_) {
-                    if (!mounted) return;
-                    _loadBookmarks();
-                    navigator.pop();
-                  });
-                } else {
-                  navigator.pop();
-                }
-              },
-              child: const Text('Simpan'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _showFolderPicker(int verseNumber) async {
-    final folders = await getIt<BookmarkService>().getFolders();
-    if (!mounted) return;
-    if (!_isBookmarked(verseNumber)) {
-      await getIt<BookmarkService>().toggleBookmark(
-        surah: widget.surahNumber,
-        ayah: verseNumber,
-      );
-      await _loadBookmarks();
-      if (!mounted) return;
-    }
-    final navigator = Navigator.of(context);
-    if (!mounted) return;
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: const Text('Pilih Folder'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: () {
-                    navigator.pop();
-                    _showCreateFolderDialog();
-                  },
-                ),
-              ),
-              ListTile(
-                title: const Text('Tanpa folder'),
-                                onTap: () {
-                  final bNavigator = Navigator.of(context);
-                  getIt<BookmarkService>().assignFolder(
-                    surah: widget.surahNumber,
-                    ayah: verseNumber,
-                    folderId: null,
-                  ).then((_) {
-                    if (mounted) {
-                      bNavigator.pop();
-                      setState(() {});
-                    }
-                  });
-                },
-              ),
-              ...folders.map(
-                (folder) => ListTile(
-                  title: Text(folder.name),
-                                                      onTap: () {
-                    final bNavigator = Navigator.of(context);
-                    getIt<BookmarkService>().assignFolder(
-                      surah: widget.surahNumber,
-                      ayah: verseNumber,
-                      folderId: folder.id,
-                    ).then((_) {
-                      if (!mounted) return;
-                      bNavigator.pop();
-                      setState(() {});
-                    });
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showCreateFolderDialog() {
-    final controller = TextEditingController();
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Buat Folder'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Contoh: Hafalan',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-                                    onPressed: () {
-              final navigator = Navigator.of(context);
-              final name = controller.text.trim();
-              if (name.isEmpty) return;
-              getIt<BookmarkService>().addFolder(name).then((_) {
-                if (context.mounted) {
-                  navigator.pop();
-                  setState(() {});
-                }
-              });
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _shareAsText({
-    required int verseNumber,
-    required String arabic,
-    required String translation,
-    required String transliteration,
-  }) {
-    final cleanArabic = arabic.replaceAll(RegExp(r'<[^>]+>'), '');
-    final surahName = quran.getSurahName(widget.surahNumber);
-    final buffer = StringBuffer()
-      ..writeln(cleanArabic)
-      ..writeln();
-    if (transliteration.isNotEmpty) {
-      buffer..writeln(transliteration)..writeln();
-    }
-    buffer
-      ..writeln(translation)
-      ..writeln()
-      ..writeln('— QS. $surahName : $verseNumber');
-    Share.share(buffer.toString().trim());
-  }
-
-  void _showShareDialog({
-    required int verseNumber,
-    required String arabic,
-    required String translation,
-    required String transliteration,
-  }) {
-    final boundaryKey = GlobalKey();
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Bagikan Ayat'),
-          content: SingleChildScrollView(
-            child: RepaintBoundary(
-              key: boundaryKey,
-              child: _buildShareCard(
-                verseNumber: verseNumber,
-                arabic: arabic,
-                translation: translation,
-                transliteration: transliteration,
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Batal'),
-            ),
-            OutlinedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _shareAsText(
-                  verseNumber: verseNumber,
-                  arabic: arabic,
-                  translation: translation,
-                  transliteration: transliteration,
-                );
-              },
-              child: const Text('Teks'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final navigator = Navigator.of(context);
-                _captureAndShare(
-                  boundaryKey,
-                  fileName:
-                      'ayah_${widget.surahNumber}_$verseNumber.png',
-                  subject:
-                      'Surah ${quran.getSurahName(widget.surahNumber)} ayat $verseNumber',
-                ).then((_) {
-                  if (!navigator.mounted) return;
-                  navigator.pop();
-                });
-              },
-              child: const Text('Gambar'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildShareCard({
-    required int verseNumber,
-    required String arabic,
-    required String translation,
-    required String transliteration,
-  }) {
-    final theme = Theme.of(context);
-    final cleanArabic = arabic.replaceAll(RegExp(r'<[^>]+>'), '');
-    final title =
-        'QS. ${quran.getSurahName(widget.surahNumber)} : $verseNumber';
-    return Container(
-      width: 320,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withAlpha(20),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withAlpha(51)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.primaryColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            cleanArabic,
-            textAlign: TextAlign.right,
-            style: _arabicTextStyle(_quranSettings.value, theme).copyWith(
-              fontSize: 24,
-            ),
-          ),
-          if (transliteration.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              transliteration,
-              style: GoogleFonts.notoSans(
-                fontSize: 12,
-                color: theme.textTheme.bodyMedium?.color,
-              ),
-            ),
-          ],
-          const SizedBox(height: 8),
-          Text(
-            translation,
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(Icons.auto_awesome, size: 16, color: theme.primaryColor),
-              const SizedBox(width: 6),
-              Text(
-                "Al-Quran Terjemahan",
-                style: theme.textTheme.labelMedium,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _captureAndShare(
-    GlobalKey boundaryKey, {
-    required String fileName,
-    required String subject,
-  }) async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    final pixelRatio =
-        mounted ? MediaQuery.of(context).devicePixelRatio : 1.0;
-    try {
-      // Tunggu dialog merender konten sepenuhnya (wait for dialog animation)
-      await Future.delayed(const Duration(milliseconds: 350));
-      if (!mounted) return;
-
-      // Ensure frame is drawn
-      await WidgetsBinding.instance.endOfFrame;
-      if (!mounted) return;
-
-      final contextObject = boundaryKey.currentContext;
-      if (contextObject == null || !contextObject.mounted) {
-        throw Exception('Gagal menangkap gambar: Context null.');
-      }
-
-      RenderRepaintBoundary? boundary =
-          contextObject.findRenderObject() as RenderRepaintBoundary?;
-
-      if (boundary == null) {
-        throw Exception('Gagal menangkap gambar: RenderObject null.');
-      }
-
-      if (boundary.debugNeedsPaint) {
-        await Future.delayed(const Duration(milliseconds: 50));
-        if (!mounted) return;
-        await WidgetsBinding.instance.endOfFrame;
-      }
-
-      final image = await boundary.toImage(pixelRatio: pixelRatio);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-
-      if (byteData == null) {
-        throw Exception('Gagal mengonversi gambar.');
-      }
-
-      final pngBytes = byteData.buffer.asUint8List();
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(pngBytes);
-
-      try {
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: subject,
-        );
-      } catch (_) {
-        // share_plus may throw after the share sheet closes; this is non-fatal.
-        return;
-      }
-    } catch (e) {
-      if (!mounted) return;
-      messenger?.showSnackBar(
-        SnackBar(content: Text('Gagal membagikan ayat: $e')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocConsumer<QuranAudioCubit, QuranAudioState>(
-      listener: (context, state) {
-        final messenger = ScaffoldMessenger.of(context);
-        if (state is QuranAudioPlaying && state.currentAyah != _highlightVerse) {
-          setState(() {
-            _highlightVerse = state.currentAyah;
-          });
-        } else if (state is QuranAudioPaused && state.currentAyah != _highlightVerse) {
-           setState(() {
-            _highlightVerse = state.currentAyah;
-          });
-        }
-        if (state is QuranAudioError) {
-          messenger
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(state.message)));
-        }
-      },
-      builder: (context, state) {
-        final cubit = context.read<QuranAudioCubit>();
-        final int verseCount = quran.getVerseCount(widget.surahNumber);
-        final settings = _quranSettings.value;
-        final needsCustomTranslation =
-            getIt<TranslationAssetService>().requiresAsset(settings.translation);
-
-        if (needsCustomTranslation &&
-            (_customTranslationMap == null || _isTranslationLoading)) {
-          return Scaffold(
-            appBar: AppBar(title: Text(quran.getSurahName(widget.surahNumber))),
-            body: const Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        int? currentVerse;
-        if (state is QuranAudioPlaying) {
-          currentVerse = state.currentAyah;
-        } else if (state is QuranAudioPaused) {
-          currentVerse = state.currentAyah;
-        }
-
-        final isBookmarked = _isBookmarked(currentVerse ?? _highlightVerse ?? 1);
-
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(quran.getSurahName(widget.surahNumber)),
-            actions: [
-              IconButton(
-                onPressed: _showDisplaySettingsSheet,
-                icon: const Icon(Icons.text_fields),
-                tooltip: "Tampilan",
-              ),
-              IconButton(
-                onPressed: cubit.playPause,
-                icon: (state is QuranAudioLoading)
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        (state is QuranAudioPlaying)
-                            ? Icons.pause
-                            : Icons.play_arrow,
-                      ),
-                tooltip: "Audio",
-              ),
-              IconButton(
-                onPressed: () {
-                  final messenger = ScaffoldMessenger.of(context);
-                  final verseToBookmark = currentVerse ?? _highlightVerse ?? 1;
-                  final wasBookmarked = _isBookmarked(verseToBookmark);
-                  _toggleBookmark(verseToBookmark).then((_) {
-                    if (!mounted || !context.mounted) return;
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          wasBookmarked
-                              ? 'Bookmark dihapus.'
-                              : 'Bookmark disimpan.',
-                        ),
-                      ),
-                    );
-                  });
-                },
-                icon: Icon(
-                  isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                ),
-                tooltip: isBookmarked ? "Hapus Bookmark" : "Simpan Bookmark",
-              ),
-              IconButton(
-                onPressed: () => _showReaderMoreSheet(context, state, cubit),
-                icon: const Icon(Icons.more_horiz),
-                tooltip: "Lainnya",
-              ),
-            ],
-          ),
-          bottomNavigationBar: (state is QuranAudioPlaying || state is QuranAudioPaused) ? _buildMiniPlayer(context, state, cubit) : null,
-          body: Column(
-            children: [
-              // Basmalah Header
-              if (widget.surahNumber != 1 && widget.surahNumber != 9)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withAlpha(20),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Center(
-                      child: Text(
-                        "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
-                        style: _arabicTextStyle(
-                          _quranSettings.value,
-                          Theme.of(context),
-                        ).copyWith(fontSize: 24),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ),
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: verseCount,
-                  itemBuilder: (context, index) {
-                    final verseNumber = index + 1;
-                    final verseKey = "${widget.surahNumber}:$verseNumber";
-                    final verseText = AlQuran.verse(
-                      widget.surahNumber,
-                      verseNumber,
-                      mode: settings.showTajwid
-                          ? VerseMode.uthmaniTajweed
-                          : VerseMode.uthmani,
-                    ).text;
-                    final rawTranslation = needsCustomTranslation
-                        ? (_customTranslationMap?[verseKey] ?? '')
-                        : settings.translation == TranslationSource.enSaheeh
-                            ? quran.getVerseTranslation(
-                                widget.surahNumber,
-                                verseNumber,
-                                translation: quran.Translation.enSaheeh,
-                              )
-                            : AlQuran.translation(
-                                _translationType(settings.translation),
-                                verseKey,
-                              ).text;
-                    final translationText =
-                        _sanitizeTranslation(rawTranslation);
-                    final transliterationText = settings.showLatin
-                        ? _decodeHtml(AlQuran.transliteration(verseKey).text)
-                        : '';
-                    return InkWell(
-                      onTap: () => _handleVerseTap(
-                        verseNumber: verseNumber,
-                        arabic: verseText,
-                        translation: translationText,
-                        transliteration: transliterationText,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 20,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _highlightVerse == verseNumber
-                              ? Theme.of(context).primaryColor.withAlpha(20)
-                              : null,
-                          border: Border(
-                            bottom: BorderSide(
-                              color: Colors.grey.withAlpha(26),
-                            ),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
+                                    Clipboard.setData(ClipboardData(text: _sanitizeTranslation(arabic))).then((_) {
+                                      if (!mounted) return;
+                                      navigator.pop();
+                                      messenger.showSnackBar(
+                                        const SnackBar(content: Text('Teks Arab disalin.')),
+                                      );
+                                    });
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.copy),
+                                  title: const Text('Salin terjemahan'),
+                                                                  onTap: () {
+                                    final navigator = Navigator.of(context);
+                                    final messenger = ScaffoldMessenger.of(context);
+                                    Clipboard.setData(ClipboardData(text: translation)).then((_) {
+                                      if (!mounted) return;
+                                      navigator.pop();
+                                      messenger.showSnackBar(
+                                        const SnackBar(content: Text('Terjemahan disalin.')),
+                                      );
+                                    });
+                                  },
+                                ),
+                                if (transliteration.isNotEmpty)
+                                  ListTile(
+                                    leading: const Icon(Icons.text_fields),
+                                    title: const Text('Salin transliterasi'),
+                                                                        onTap: () {
+                                      final navigator = Navigator.of(context);
+                                      final messenger = ScaffoldMessenger.of(context);
+                                      Clipboard.setData(
+                                        ClipboardData(text: transliteration),
+                                      ).then((_) {
+                                        if (!mounted) return;
+                                        navigator.pop();
+                                        messenger.showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Transliterasi disalin.'),
+                                          ),
+                                        );
+                                      });
+                                    },
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
+                                ListTile(
+                                  leading: const Icon(Icons.share_outlined),
+                                  title: const Text('Bagikan ayat'),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    _showShareDialog(
+                                      verseNumber: verseNumber,
+                                      arabic: arabic,
+                                      translation: translation,
+                                      transliteration: transliteration,
+                                    );
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.menu_book_outlined),
+                                  title: const Text('Tafsir ringkas'),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    Navigator.push(
                                       context,
-                                    ).primaryColor.withAlpha(26),
-                                    borderRadius:
-                                        BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Text(
-                                        "Ayat $verseNumber",
-                                        style: TextStyle(
-                                          color:
-                                              Theme.of(context).primaryColor,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
+                                      MaterialPageRoute(
+                                        builder: (_) => TafsirPage(
+                                          surahNumber: widget.surahNumber,
+                                          verseNumber: verseNumber,
+                                          arabic: arabic,
+                                          translation: translation,
+                                          transliteration: transliteration,
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    );
+                                  },
                                 ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      onPressed: () => _showShareDialog(
-                                        verseNumber: verseNumber,
-                                        arabic: verseText,
-                                        translation: translationText,
-                                        transliteration:
-                                            transliterationText,
-                                      ),
-                                      icon: Icon(
-                                        Icons.share_outlined,
-                                        size: 20,
-                                        color: Colors.grey[400],
-                                      ),
-                                    ),
-                                    IconButton(
-                                      onPressed: () =>
-                                          _toggleBookmark(verseNumber),
-                                      icon: Icon(
-                                        _isBookmarked(verseNumber)
-                                            ? Icons.bookmark
-                                            : Icons.bookmark_border,
-                                        size: 20,
-                                        color: _isBookmarked(verseNumber)
-                                            ? Theme.of(context).primaryColor
-                                            : Colors.grey[400],
-                                      ),
-                                    ),
-                                  ],
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: Text(
+                                    'Surah ${widget.surahNumber} • Ayat $verseNumber',
+                                    style: Theme.of(context).textTheme.labelMedium,
+                                  ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 24),
-                            _buildArabicText(
-                              text: verseText,
-                              showTajwid: settings.showTajwid,
-                              theme: Theme.of(context),
-                              settings: settings,
+                          );
+                        },
+                      );
+                    }
+                  
+                    void _showNoteDialog(int verseNumber) {
+                      final controller = TextEditingController();
+                      showDialog<void>(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text('Catatan Ayat'),
+                            content: TextField(
+                              controller: controller,
+                              maxLines: 3,
+                              decoration: const InputDecoration(
+                                hintText: 'Tulis catatan singkat...',
+                              ),
                             ),
-                            if (settings.showLatin &&
-                                transliterationText.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 12),
-                                child: Text(
-                                  transliterationText,
-                                  style: GoogleFonts.notoSans(
-                                    fontSize: math.max(
-                                      12,
-                                      settings.translationFontSize - 2,
-                                    ),
-                                    height:
-                                        settings.translationLineHeight,
-                                    color: Colors.grey[600],
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Batal'),
+                              ),
+                              ElevatedButton(
+                                              onPressed: () {
+                                  final navigator = Navigator.of(context);
+                                  final note = controller.text.trim();
+                                  if (note.isNotEmpty) {
+                                    getIt<BookmarkService>().saveNote(
+                                      surah: widget.surahNumber,
+                                      ayah: verseNumber,
+                                      note: note,
+                                    ).then((_) {
+                                      if (!mounted) return;
+                                      _loadBookmarks();
+                                      navigator.pop();
+                                    });
+                                  } else {
+                                    navigator.pop();
+                                  }
+                                },
+                                child: const Text('Simpan'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    }
+                  
+                    Future<void> _showFolderPicker(int verseNumber) async {
+                      final folders = await getIt<BookmarkService>().getFolders();
+                      if (!mounted) return;
+                      if (!_isBookmarked(verseNumber)) {
+                        await getIt<BookmarkService>().toggleBookmark(
+                          surah: widget.surahNumber,
+                          ayah: verseNumber,
+                        );
+                        await _loadBookmarks();
+                        if (!mounted) return;
+                      }
+                      final navigator = Navigator.of(context);
+                      if (!mounted) return;
+                      showModalBottomSheet(
+                        context: context,
+                        builder: (context) {
+                          return SafeArea(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ListTile(
+                                  title: const Text('Pilih Folder'),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.add),
+                                    onPressed: () {
+                                      navigator.pop();
+                                      _showCreateFolderDialog();
+                                    },
                                   ),
                                 ),
-                              ),
-                            const SizedBox(height: 16),
-                            Text(
-                              translationText,
-                              textAlign: TextAlign.left,
-                              style: GoogleFonts.poppins(
-                                fontSize: settings.translationFontSize,
-                                height: settings.translationLineHeight,
-                                color: Colors.grey[600],
-                              ),
+                                ListTile(
+                                  title: const Text('Tanpa folder'),
+                                                  onTap: () {
+                                    final bNavigator = Navigator.of(context);
+                                    getIt<BookmarkService>().assignFolder(
+                                      surah: widget.surahNumber,
+                                      ayah: verseNumber,
+                                      folderId: null,
+                                    ).then((_) {
+                                      if (mounted) {
+                                        bNavigator.pop();
+                                        setState(() {});
+                                      }
+                                    });
+                                  },
+                                ),
+                                ...folders.map(
+                                  (folder) => ListTile(
+                                    title: Text(folder.name),
+                                                                        onTap: () {
+                                      final bNavigator = Navigator.of(context);
+                                      getIt<BookmarkService>().assignFolder(
+                                        surah: widget.surahNumber,
+                                        ayah: verseNumber,
+                                        folderId: folder.id,
+                                      ).then((_) {
+                                        if (!mounted) return;
+                                        bNavigator.pop();
+                                        setState(() {});
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
-                            if (settings.showWordByWord)
-                              _buildWordByWordSection(
-                                verseNumber: verseNumber,
-                                showLatin: settings.showLatin,
-                                language: settings.translation.language,
-                              ),
+                          );
+                        },
+                      );
+                    }
+                  
+                    void _showCreateFolderDialog() {
+                      final controller = TextEditingController();
+                      showDialog<void>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Buat Folder'),
+                          content: TextField(
+                            controller: controller,
+                            decoration: const InputDecoration(
+                              hintText: 'Contoh: Hafalan',
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Batal'),
+                            ),
+                            ElevatedButton(
+                                                      onPressed: () {
+                                final navigator = Navigator.of(context);
+                                final name = controller.text.trim();
+                                if (name.isEmpty) return;
+                                getIt<BookmarkService>().addFolder(name).then((_) {
+                                  if (context.mounted) {
+                                    navigator.pop();
+                                    setState(() {});
+                                  }
+                                });
+                              },
+                              child: const Text('Simpan'),
+                            ),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _JuzStart {
-  final int surah;
-  final int ayah;
-
-  const _JuzStart(this.surah, this.ayah);
-}
+                      );
+                    }
+                  
+                    void _shareAsText({
+                      required int verseNumber,
+                      required String arabic,
+                      required String translation,
+                      required String transliteration,
+                    }) {
+                      final cleanArabic = _sanitizeTranslation(arabic);
+                      final surahName = quran.getSurahName(widget.surahNumber);
+                      final buffer = StringBuffer()
+                        ..writeln(cleanArabic)
+                        ..writeln();
+                      if (transliteration.isNotEmpty) {
+                        buffer..writeln(transliteration)..writeln();
+                      }
+                      buffer
+                        ..writeln(translation)
+                        ..writeln()
+                        ..writeln('— QS. $surahName : $verseNumber');
+                      Share.share(buffer.toString().trim());
+                    }
+                  
+                    void _showShareDialog({
+                      required int verseNumber,
+                      required String arabic,
+                      required String translation,
+                      required String transliteration,
+                    }) {
+                      final boundaryKey = GlobalKey();
+                      showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text('Bagikan Ayat'),
+                            content: SingleChildScrollView(
+                              child: RepaintBoundary(
+                                key: boundaryKey,
+                                child: _buildShareCard(
+                                  verseNumber: verseNumber,
+                                  arabic: arabic,
+                                  translation: translation,
+                                  transliteration: transliteration,
+                                ),
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Batal'),
+                              ),
+                              OutlinedButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  _shareAsText(
+                                    verseNumber: verseNumber,
+                                    arabic: arabic,
+                                    translation: translation,
+                                    transliteration: transliteration,
+                                  );
+                                },
+                                child: const Text('Teks'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  final navigator = Navigator.of(context);
+                                  _captureAndShare(
+                                    boundaryKey,
+                                    fileName:
+                                        'ayah_${widget.surahNumber}_$verseNumber.png',
+                                    subject:
+                                        'Surah ${quran.getSurahName(widget.surahNumber)} ayat $verseNumber',
+                                  ).then((_) {
+                                    if (!navigator.mounted) return;
+                                    navigator.pop();
+                                  });
+                                },
+                                child: const Text('Gambar'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    }
+                  
+                    Widget _buildShareCard({
+                      required int verseNumber,
+                      required String arabic,
+                      required String translation,
+                      required String transliteration,
+                    }) {
+                      final theme = Theme.of(context);
+                      final cleanArabic = _sanitizeTranslation(arabic);
+                      final title =
+                          'QS. ${quran.getSurahName(widget.surahNumber)} : $verseNumber';
+                      return Container(
+                        width: 320,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withAlpha(20),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.withAlpha(51)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: theme.primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              cleanArabic,
+                              textAlign: TextAlign.right,
+                              style: _arabicTextStyle(_quranSettings.value, theme).copyWith(
+                                fontSize: 24,
+                              ),
+                            ),
+                            if (transliteration.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                transliteration,
+                                style: GoogleFonts.notoSans(
+                                  fontSize: 12,
+                                  color: theme.textTheme.bodyMedium?.color,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            Text(
+                              translation,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Icon(Icons.auto_awesome, size: 16, color: theme.primaryColor),
+                                const SizedBox(width: 6),
+                                Text(
+                                  "Al-Quran Terjemahan",
+                                  style: theme.textTheme.labelMedium,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  
+                      Future<void> _captureAndShare(
+                        GlobalKey boundaryKey, {
+                        required String fileName,
+                        required String subject,
+                      }) async {
+                        final messenger = ScaffoldMessenger.maybeOf(context);
+                        final pixelRatio =
+                            mounted ? MediaQuery.of(context).devicePixelRatio : 1.0;
+                    
+                        // Use a post-frame callback to ensure the widget is rendered.
+                        WidgetsBinding.instance.addPostFrameCallback((_) async {
+                          try {
+                            final contextObject = boundaryKey.currentContext;
+                            if (contextObject == null) {
+                              throw Exception('Gagal menangkap gambar: Context null.');
+                            }
+                    
+                            RenderRepaintBoundary boundary =
+                                contextObject.findRenderObject() as RenderRepaintBoundary;
+                    
+                            final image = await boundary.toImage(pixelRatio: pixelRatio);
+                            final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+                    
+                            if (byteData == null) {
+                              throw Exception('Gagal mengonversi gambar.');
+                            }
+                    
+                            final pngBytes = byteData.buffer.asUint8List();
+                            final dir = await getTemporaryDirectory();
+                            final file = File('${dir.path}/$fileName');
+                            await file.writeAsBytes(pngBytes);
+                    
+                            await Share.shareXFiles(
+                              [XFile(file.path)],
+                              text: subject,
+                            );
+                          } catch (e) {
+                            if (!mounted) return;
+                            messenger?.showSnackBar(
+                              SnackBar(content: Text('Gagal membagikan ayat: $e')),
+                            );
+                          }
+                        });
+                      }                  
+                    @override
+                    Widget build(BuildContext context) {
+                      return BlocConsumer<QuranAudioCubit, QuranAudioState>(
+                        listener: (context, state) {
+                          final messenger = ScaffoldMessenger.of(context);
+                          if (state is QuranAudioPlaying && state.currentAyah != _highlightVerse) {
+                            setState(() {
+                              _highlightVerse = state.currentAyah;
+                            });
+                          } else if (state is QuranAudioPaused && state.currentAyah != _highlightVerse) {
+                             setState(() {
+                              _highlightVerse = state.currentAyah;
+                            });
+                          }
+                          if (state is QuranAudioError) {
+                            messenger
+                              ..hideCurrentSnackBar()
+                              ..showSnackBar(SnackBar(content: Text(state.message)));
+                          }
+                        },
+                        builder: (context, state) {
+                          final cubit = context.read<QuranAudioCubit>();
+                          final int verseCount = quran.getVerseCount(widget.surahNumber);
+                          final settings = _quranSettings.value;
+                          final needsCustomTranslation =
+                              getIt<TranslationAssetService>().requiresAsset(settings.translation);
+                  
+                          if (needsCustomTranslation &&
+                              (_customTranslationMap == null || _isTranslationLoading)) {
+                            return Scaffold(
+                              appBar: AppBar(title: Text(quran.getSurahName(widget.surahNumber))),
+                              body: const Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                  
+                          int? currentVerse;
+                          if (state is QuranAudioPlaying) {
+                            currentVerse = state.currentAyah;
+                          } else if (state is QuranAudioPaused) {
+                            currentVerse = state.currentAyah;
+                          }
+                  
+                          final isBookmarked = _isBookmarked(currentVerse ?? _highlightVerse ?? 1);
+                  
+                          return Scaffold(
+                            appBar: AppBar(
+                              title: Text(quran.getSurahName(widget.surahNumber)),
+                              actions: [
+                                IconButton(
+                                  onPressed: _showDisplaySettingsSheet,
+                                  icon: const Icon(Icons.text_fields),
+                                  tooltip: "Tampilan",
+                                ),
+                                IconButton(
+                                  onPressed: cubit.playPause,
+                                  icon: (state is QuranAudioLoading)
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        )
+                                      : Icon(
+                                          (state is QuranAudioPlaying)
+                                              ? Icons.pause
+                                              : Icons.play_arrow,
+                                        ),
+                                  tooltip: "Audio",
+                                ),
+                                IconButton(
+                                  onPressed: () {
+                                    final messenger = ScaffoldMessenger.of(context);
+                                    final verseToBookmark = currentVerse ?? _highlightVerse ?? 1;
+                                    final wasBookmarked = _isBookmarked(verseToBookmark);
+                                    _toggleBookmark(verseToBookmark).then((_) {
+                                      if (!mounted || !context.mounted) return;
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            wasBookmarked
+                                                ? 'Bookmark dihapus.'
+                                                : 'Bookmark disimpan.',
+                                          ),
+                                        ),
+                                      );
+                                    });
+                                  },
+                                  icon: Icon(
+                                    isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                                  ),
+                                  tooltip: isBookmarked ? "Hapus Bookmark" : "Simpan Bookmark",
+                                ),
+                                IconButton(
+                                  onPressed: () => _showReaderMoreSheet(context, state, cubit),
+                                  icon: const Icon(Icons.more_horiz),
+                                  tooltip: "Lainnya",
+                                ),
+                              ],
+                            ),
+                            bottomNavigationBar: (state is QuranAudioPlaying || state is QuranAudioPaused) ? _buildMiniPlayer(context, state, cubit) : null,
+                            body: Column(
+                              children: [
+                                // Basmalah Header
+                                if (widget.surahNumber != 1 && widget.surahNumber != 9)
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 14),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).primaryColor.withAlpha(20),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+                                          style: _arabicTextStyle(
+                                            _quranSettings.value,
+                                            Theme.of(context),
+                                          ).copyWith(fontSize: 24),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                Expanded(
+                                  child: ListView.builder(
+                                    controller: _scrollController,
+                                    itemCount: verseCount,
+                                    itemBuilder: (context, index) {
+                                      final verseNumber = index + 1;
+                                      final verseKey = "${widget.surahNumber}:$verseNumber";
+                                      final verseText = AlQuran.verse(
+                                        widget.surahNumber,
+                                        verseNumber,
+                                        mode: settings.showTajwid
+                                            ? VerseMode.uthmaniTajweed
+                                            : VerseMode.uthmani,
+                                      ).text;
+                                      final rawTranslation = needsCustomTranslation
+                                          ? (_customTranslationMap?[verseKey] ?? '')
+                                          : settings.translation == TranslationSource.enSaheeh
+                                              ? quran.getVerseTranslation(
+                                                  widget.surahNumber,
+                                                  verseNumber,
+                                                  translation: quran.Translation.enSaheeh,
+                                                )
+                                              : AlQuran.translation(
+                                                  _translationType(settings.translation),
+                                                  verseKey,
+                                                ).text;
+                                      final translationText =
+                                          _sanitizeTranslation(rawTranslation);
+                                      final transliterationText = settings.showLatin
+                                          ? _decodeHtml(AlQuran.transliteration(verseKey).text)
+                                          : '';
+                                      return InkWell(
+                                        onTap: () => _handleVerseTap(
+                                          verseNumber: verseNumber,
+                                          arabic: verseText,
+                                          translation: translationText,
+                                          transliteration: transliterationText,
+                                        ),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 20,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: _highlightVerse == verseNumber
+                                                ? Theme.of(context).primaryColor.withAlpha(20)
+                                                : null,
+                                            border: Border(
+                                              bottom: BorderSide(
+                                                color: Colors.grey.withAlpha(26),
+                                              ),
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                                            children: [
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 4,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      color: Theme.of(
+                                                        context,
+                                                      ).primaryColor.withAlpha(26),
+                                                      borderRadius:
+                                                          BorderRadius.circular(12),
+                                                    ),
+                                                    child: Row(
+                                                      children: [
+                                                        Text(
+                                                          "Ayat $verseNumber",
+                                                          style: TextStyle(
+                                                            color:
+                                                                Theme.of(context).primaryColor,
+                                                            fontWeight: FontWeight.bold,
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  Row(
+                                                    children: [
+                                                      IconButton(
+                                                        onPressed: () => _showShareDialog(
+                                                          verseNumber: verseNumber,
+                                                          arabic: verseText,
+                                                          translation: translationText,
+                                                          transliteration:
+                                                              transliterationText,
+                                                        ),
+                                                        icon: Icon(
+                                                          Icons.share_outlined,
+                                                          size: 20,
+                                                          color: Colors.grey[400],
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        onPressed: () =>
+                                                            _toggleBookmark(verseNumber),
+                                                        icon: Icon(
+                                                          _isBookmarked(verseNumber)
+                                                              ? Icons.bookmark
+                                                              : Icons.bookmark_border,
+                                                          size: 20,
+                                                          color: _isBookmarked(verseNumber)
+                                                              ? Theme.of(context).primaryColor
+                                                              : Colors.grey[400],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 24),
+                                              _buildArabicText(
+                                                text: verseText,
+                                                showTajwid: settings.showTajwid,
+                                                theme: Theme.of(context),
+                                                settings: settings,
+                                              ),
+                                              if (settings.showLatin &&
+                                                  transliterationText.isNotEmpty)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(top: 12),
+                                                  child: Text(
+                                                    transliterationText,
+                                                    style: GoogleFonts.notoSans(
+                                                      fontSize: math.max(
+                                                        12,
+                                                        settings.translationFontSize - 2,
+                                                      ),
+                                                      height:
+                                                          settings.translationLineHeight,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                ),
+                                              const SizedBox(height: 16),
+                                              Text(
+                                                translationText,
+                                                textAlign: TextAlign.left,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: settings.translationFontSize,
+                                                  height: settings.translationLineHeight,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                              if (settings.showWordByWord)
+                                                _buildWordByWordSection(
+                                                  verseNumber: verseNumber,
+                                                  showLatin: settings.showLatin,
+                                                  language: settings.translation.language,
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    }
+                  }
+                  
+                  class _JuzStart {
+                    final int surah;
+                    final int ayah;
+                  
+                    const _JuzStart(this.surah, this.ayah);
+                  }
+                  
