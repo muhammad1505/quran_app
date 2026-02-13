@@ -4,6 +4,7 @@ import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:quran_app/core/settings/audio_settings.dart';
@@ -25,6 +26,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  String _appVersion = '';
   bool _enableNotifications = true;
   bool _manualLocationEnabled = false;
   String? _manualLocationName;
@@ -45,6 +47,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _prayerSettings.addListener(_onSettingsChanged);
     _themeSettings.addListener(_onSettingsChanged);
     _loadSettings();
+    _loadVersionInfo();
   }
 
   @override
@@ -59,6 +62,15 @@ class _SettingsPageState extends State<SettingsPage> {
   void _onSettingsChanged() {
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  Future<void> _loadVersionInfo() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+      });
     }
   }
 
@@ -332,10 +344,10 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const Divider(),
           _buildSectionHeader("Tentang"),
-          const ListTile(
-            title: Text("Versi Aplikasi"),
-            subtitle: Text("1.0.0 (Release)"),
-            leading: Icon(Icons.info_outline),
+          ListTile(
+            title: const Text("Versi Aplikasi"),
+            subtitle: Text(_appVersion),
+            leading: const Icon(Icons.info_outline),
           ),
         ],
       ),

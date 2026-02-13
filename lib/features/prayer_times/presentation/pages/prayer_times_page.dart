@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:quran_app/core/services/prayer_notification_service.dart';
 import 'package:quran_app/core/settings/prayer_settings.dart';
 import 'package:quran_app/features/settings/presentation/pages/settings_page.dart';
 import 'package:quran_app/core/di/injection.dart';
@@ -148,7 +149,20 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
   Future<void> _calculatePrayerTimes(Coordinates coordinates) async {
     final params = _prayerSettings.buildParameters();
     final prayerTimes = PrayerTimes.today(coordinates, params);
+    final tomorrow = PrayerTimes(
+      coordinates,
+      DateComponents.from(DateTime.now().add(const Duration(days: 1))),
+      params,
+    );
     final next = _resolveNextPrayer(prayerTimes, coordinates, params);
+
+    // Re-schedule notifications
+    await getIt<PrayerNotificationService>().schedulePrayerTimes(
+      prayerTimes,
+      tomorrow,
+      _prayerSettings.value,
+    );
+
     setState(() {
       _prayerTimes = prayerTimes;
       _nextPrayer = next.prayer;

@@ -124,10 +124,10 @@ class _HelpFeedbackPageState extends State<HelpFeedbackPage> {
           Card(
             child: ListTile(
               leading: const Icon(Icons.email_outlined),
-              title: const Text('support@alquran-terjemahan.app'),
+              title: const Text('emailbaruk50@gmail.com'),
               subtitle: const Text('Email bantuan & feedback'),
               trailing: const Icon(Icons.copy),
-              onTap: () => _copyText('support@alquran-terjemahan.app'),
+              onTap: () => _copyText('emailbaruk50@gmail.com'),
             ),
           ),
         ],
