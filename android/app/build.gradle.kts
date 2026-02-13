@@ -20,11 +20,20 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    // Release signing configuration
+    val keystorePropertiesFile = rootProject.file("key.properties")
+    val signingRelease = if (keystorePropertiesFile.exists()) {
+        val props = java.util.Properties().apply { load(keystorePropertiesFile.inputStream()) }
+        signingConfigs.create("release") {
+            storeFile = file(props["storeFile"] as String)
+            storePassword = props["storePassword"] as String
+            keyAlias = props["keyAlias"] as String
+            keyPassword = props["storePassword"] as String
+        }
+    } else null
+
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.quran_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 21
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -33,9 +42,7 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingRelease ?: signingConfigs.getByName("debug")
         }
     }
 }

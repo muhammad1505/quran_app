@@ -1,0 +1,3 @@
+storeFile=release.keystore
+storePassword=YOUR_PASSWORD_HERE
+keyAlias=release
