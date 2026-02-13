@@ -100,8 +100,8 @@ class _PermissionStatusCardState extends State<PermissionStatusCard> {
                   : 'App tidak di-optimize ✅ (atau sudah di-nonaktifkan secara manual)',
               granted: !_batteryOptimized,
               onTap: () async {
-                final result = await BatteryOptimizationHelper.requestDisableBatteryOptimization();
                 final messenger = ScaffoldMessenger.of(context);
+                final result = await BatteryOptimizationHelper.requestDisableBatteryOptimization();
                 _checkPermissions();
                 if (!mounted) return;
                 messenger.showSnackBar(
