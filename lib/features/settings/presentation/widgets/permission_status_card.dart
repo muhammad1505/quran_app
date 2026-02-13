@@ -96,14 +96,49 @@ class _PermissionStatusCardState extends State<PermissionStatusCard> {
             _PermissionItem(
               title: 'Optimasi Baterai',
               subtitle: _batteryOptimized
-                  ? 'Aplikasi masih di-optimize (dapat menghambat notifikasi)'
-                  : 'Aplikasi tidak di-optimize ✅',
+                  ? 'App mungkin masih di-optimize. Periksa manual jika sudah di-nonaktifkan.'
+                  : 'App tidak di-optimize ✅ (atau sudah di-nonaktifkan secara manual)',
               granted: !_batteryOptimized,
               onTap: () async {
-                await BatteryOptimizationHelper.requestDisableBatteryOptimization();
+                final result = await BatteryOptimizationHelper.requestDisableBatteryOptimization();
+                final messenger = ScaffoldMessenger.of(context);
                 _checkPermissions();
+                if (!mounted) return;
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      result
+                          ? 'Battery optimization disabled ✅'
+                          : 'Tidak bisa disable battery optimization otomatis. Ikuti panduan manual di bawah.',
+                    ),
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
               },
             ),
+            if (_batteryOptimized) ...[ 
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Deteksi optimasi baterai tidak 100% akurat. Jika sudah nonaktifkan secara manual, abaikan peringatan ini.',
+                        style: TextStyle(fontSize: 11, color: Colors.orange.shade900),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (_batteryOptimized && _manufacturer != DeviceManufacturer.other) ...[
               const SizedBox(height: 16),
               ExpansionTile(

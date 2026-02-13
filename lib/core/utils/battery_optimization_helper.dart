@@ -4,16 +4,22 @@ import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class BatteryOptimizationHelper {
+  /// Check if app is battery optimized
+  /// Note: This check is not 100% reliable on all devices.
+  /// If granted = true, app is NOT optimized ✅
+  /// If granted = false, app MAY BE optimized ⚠️
   static Future<bool> isBatteryOptimized() async {
     if (!Platform.isAndroid) return false;
     
     try {
-      // Check if ignore battery optimization permission is granted
       final status = await Permission.ignoreBatteryOptimizations.status;
+      // If permission is granted, battery optimization is DISABLED (good!)
+      // If not granted, battery optimization may still be ENABLED (bad!)
       return !status.isGranted;
     } catch (e) {
       debugPrint('Error checking battery optimization: $e');
-      return false;
+      // On error, assume it might be optimized to show warning
+      return true;
     }
   }
 
@@ -22,6 +28,7 @@ class BatteryOptimizationHelper {
     
     try {
       final status = await Permission.ignoreBatteryOptimizations.request();
+      // If granted after request, optimization was successfully disabled
       return status.isGranted;
     } catch (e) {
       debugPrint('Error requesting battery optimization: $e');
