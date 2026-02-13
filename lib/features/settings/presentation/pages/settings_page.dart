@@ -13,6 +13,7 @@ import 'package:quran_app/core/settings/theme_settings.dart';
 import 'package:quran_app/features/offline/presentation/pages/offline_manager_page.dart';
 import 'package:quran_app/features/quran/presentation/pages/murotal_download_page.dart';
 import 'package:quran_app/core/services/prayer_notification_service.dart';
+import 'package:quran_app/features/settings/presentation/widgets/permission_status_card.dart';
 
 import 'package:quran_app/core/di/injection.dart';
 
@@ -125,6 +126,10 @@ class _SettingsPageState extends State<SettingsPage> {
               );
             },
           ),
+          if (_enableNotifications) ...[
+            const SizedBox(height: 8),
+            const PermissionStatusCard(),
+          ],
           const Divider(),
           _buildSectionHeader("Tampilan"),
           ListTile(
