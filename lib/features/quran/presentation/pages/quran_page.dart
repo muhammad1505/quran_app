@@ -15,7 +15,7 @@ import 'package:quran/quran.dart' as quran;
 import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/bookmark_service.dart';
 import 'package:quran_app/core/services/last_read_service.dart';
-import 'package:quran_app/core/services/translation_service.dart';
+import 'package:quran_app/core/services/translation_asset_service.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
 import 'package:quran_app/core/services/word_by_word_service.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
@@ -501,7 +501,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
       getIt<QuranSettingsController>();
   final ThemeSettingsController _themeSettings =
       getIt<ThemeSettingsController>();
-  final AudioSettingsController _audioSettings = AudioSettingsController.instance;
+  final AudioSettingsController _audioSettings = getIt<AudioSettingsController>();
 
   @override
   void initState() {
@@ -687,7 +687,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     required TranslationLanguage language,
   }) {
     return FutureBuilder<List<WordByWordItem>>(
-      future: WordByWordService.instance.wordsFor(
+      future: getIt<WordByWordService>().wordsFor(
         widget.surahNumber,
         verseNumber,
         language: language,
@@ -712,7 +712,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
   }
 
   Future<void> _loadBookmarks() async {
-    final keys = await BookmarkService.instance.getKeys();
+    final keys = await getIt<BookmarkService>().getKeys();
     if (!mounted) return;
     setState(() => _bookmarkKeys = keys);
   }
@@ -722,7 +722,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
   }
 
   Future<void> _toggleBookmark(int verseNumber) async {
-    await BookmarkService.instance.toggleBookmark(
+    await getIt<BookmarkService>().toggleBookmark(
       surah: widget.surahNumber,
       ayah: verseNumber,
     );
@@ -731,7 +731,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
 
   Future<void> _maybeLoadCustomTranslation() async {
     final source = _quranSettings.value.translation;
-    final needsAsset = TranslationAssetService.instance.requiresAsset(source);
+    final needsAsset = getIt<TranslationAssetService>().requiresAsset(source);
     if (!needsAsset) {
       if (mounted) {
         setState(() {
@@ -746,7 +746,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
       return;
     }
     setState(() => _isTranslationLoading = true);
-    final map = await TranslationAssetService.instance.load(source);
+    final map = await getIt<TranslationAssetService>().load(source);
     if (mounted) {
       setState(() {
         _customTranslationMap = map;
@@ -1063,7 +1063,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
     required String transliteration,
   }) async {
     setState(() => _highlightVerse = verseNumber);
-    await LastReadService.instance.save(
+    await getIt<LastReadService>().save(
       surah: widget.surahNumber,
       ayah: verseNumber,
     );
@@ -1247,7 +1247,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                 final navigator = Navigator.of(context);
                 final note = controller.text.trim();
                 if (note.isNotEmpty) {
-                  BookmarkService.instance.saveNote(
+                  getIt<BookmarkService>().saveNote(
                     surah: widget.surahNumber,
                     ayah: verseNumber,
                     note: note,
@@ -1269,10 +1269,10 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
   }
 
   Future<void> _showFolderPicker(int verseNumber) async {
-    final folders = await BookmarkService.instance.getFolders();
+    final folders = await getIt<BookmarkService>().getFolders();
     if (!mounted) return;
     if (!_isBookmarked(verseNumber)) {
-      await BookmarkService.instance.toggleBookmark(
+      await getIt<BookmarkService>().toggleBookmark(
         surah: widget.surahNumber,
         ayah: verseNumber,
       );
@@ -1302,7 +1302,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                 title: const Text('Tanpa folder'),
                                 onTap: () {
                   final bNavigator = Navigator.of(context);
-                  BookmarkService.instance.assignFolder(
+                  getIt<BookmarkService>().assignFolder(
                     surah: widget.surahNumber,
                     ayah: verseNumber,
                     folderId: null,
@@ -1319,7 +1319,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
                   title: Text(folder.name),
                                                       onTap: () {
                     final bNavigator = Navigator.of(context);
-                    BookmarkService.instance.assignFolder(
+                    getIt<BookmarkService>().assignFolder(
                       surah: widget.surahNumber,
                       ayah: verseNumber,
                       folderId: folder.id,
@@ -1360,7 +1360,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
               final navigator = Navigator.of(context);
               final name = controller.text.trim();
               if (name.isEmpty) return;
-              BookmarkService.instance.addFolder(name).then((_) {
+              getIt<BookmarkService>().addFolder(name).then((_) {
                 if (context.mounted) {
                   navigator.pop();
                   setState(() {});
@@ -1613,7 +1613,7 @@ class _SurahDetailPageState extends State<_SurahDetailView> {
         final int verseCount = quran.getVerseCount(widget.surahNumber);
         final settings = _quranSettings.value;
         final needsCustomTranslation =
-            TranslationAssetService.instance.requiresAsset(settings.translation);
+            getIt<TranslationAssetService>().requiresAsset(settings.translation);
 
         if (needsCustomTranslation &&
             (_customTranslationMap == null || _isTranslationLoading)) {

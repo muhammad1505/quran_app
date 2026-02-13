@@ -6,9 +6,7 @@ import 'package:quran_app/core/services/translation_service.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:alfurqan/alfurqan.dart';
-import 'package:alfurqan/constant.dart';
 
-import 'package:quran_app/core/di/injection.dart';
 import 'package:injectable/injectable.dart';
 
 part 'home_state.dart';

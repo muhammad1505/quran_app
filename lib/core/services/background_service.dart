@@ -9,7 +9,7 @@ import 'package:quran_app/core/services/prayer_notification_service.dart';
 import 'package:quran_app/core/settings/prayer_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final alarmId = 0;
+const alarmId = 0;
 const String isolateName = 'prayer-time-alarm';
 SendPort? uiSendPort;
 
@@ -28,8 +28,12 @@ Future<void> scheduleAdzanNotification() async {
 
   if (lat != null && lng != null) {
     final coordinates = Coordinates(lat, lng);
-    final params = prayerSettings.buildParameters();
-    final today = PrayerTimes.today(coordinates, params);
+    final params = prayerSettingsController.buildParameters();
+    final today = PrayerTimes(
+      coordinates,
+      DateComponents.from(DateTime.now()),
+      params,
+    );
     final tomorrow = PrayerTimes(
       coordinates,
       DateComponents.from(DateTime.now().add(const Duration(days: 1))),

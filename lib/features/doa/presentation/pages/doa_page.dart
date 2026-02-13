@@ -1,8 +1,11 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/asmaul_husna_service.dart';
 import 'package:quran_app/core/services/doa_favorite_service.dart';
 import 'package:quran_app/core/services/tts_service.dart';
 import 'package:quran_app/features/asmaul_husna/presentation/pages/asmaul_detail_page.dart';
+import 'package:share_plus/share_plus.dart';
 
 class DoaPage extends StatefulWidget {
   const DoaPage({super.key});

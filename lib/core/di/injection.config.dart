@@ -68,12 +68,10 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i942.QuranSettingsController());
     gh.lazySingleton<_i422.ThemeSettingsController>(
         () => _i422.ThemeSettingsController());
+    gh.factory<_i860.QuranAudioCubit>(
+        () => _i860.QuranAudioCubit(gh<_i807.AudioCacheService>()));
     gh.factory<_i814.BookmarkCubit>(
         () => _i814.BookmarkCubit(gh<_i467.BookmarkService>()));
-    gh.factory<_i860.QuranAudioCubit>(() => _i860.QuranAudioCubit(
-          gh<_i807.AudioCacheService>(),
-          gh<_i203.AudioSettingsController>(),
-        ));
     gh.lazySingleton<_i298.TranslationService>(
         () => _i298.TranslationService(gh<_i235.TranslationAssetService>()));
     gh.factory<_i257.SearchCubit>(() => _i257.SearchCubit(

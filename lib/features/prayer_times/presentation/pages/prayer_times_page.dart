@@ -9,7 +9,6 @@ import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:quran_app/core/services/prayer_notification_service.dart';
 import 'package:quran_app/core/settings/prayer_settings.dart';
 import 'package:quran_app/features/settings/presentation/pages/settings_page.dart';
 import 'package:quran_app/core/di/injection.dart';

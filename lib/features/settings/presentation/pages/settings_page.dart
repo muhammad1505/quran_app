@@ -31,9 +31,9 @@ class _SettingsPageState extends State<SettingsPage> {
   final QuranSettingsController _quranSettings =
       getIt<QuranSettingsController>();
   final AudioSettingsController _audioSettings =
-      AudioSettingsController.instance;
+      getIt<AudioSettingsController>();
   final PrayerSettingsController _prayerSettings =
-      PrayerSettingsController.instance;
+      getIt<PrayerSettingsController>();
   final ThemeSettingsController _themeSettings =
       getIt<ThemeSettingsController>();
 

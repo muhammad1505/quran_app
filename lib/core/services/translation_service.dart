@@ -1,55 +1,47 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
 import 'package:injectable/injectable.dart';
+import 'package:quran_app/core/services/translation_asset_service.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
+import 'package:alfurqan/alfurqan.dart';
+import 'package:alfurqan/constant.dart';
 
 @lazySingleton
-class TranslationAssetService {
-  final Map<TranslationSource, Map<String, String>> _cache = {};
-  final Map<TranslationSource, Future<Map<String, String>>> _inFlight = {};
+class TranslationService {
+  final TranslationAssetService _assetService;
 
-  Future<Map<String, String>> load(TranslationSource source) {
-    if (_cache.containsKey(source)) {
-      return Future.value(_cache[source]!);
-    }
-    if (_inFlight.containsKey(source)) {
-      return _inFlight[source]!;
-    }
-    final future = _loadFromAssets(source);
-    _inFlight[source] = future;
-    return future;
-  }
+  TranslationService(this._assetService);
 
   bool requiresAsset(TranslationSource source) {
-    return _assetPath(source) != null;
+    return _assetService.requiresAsset(source);
   }
 
-  Future<Map<String, String>> _loadFromAssets(TranslationSource source) async {
-    final path = _assetPath(source);
-    if (path == null) {
-      return {};
+  Future<String> getTranslation(
+    TranslationSource source,
+    int surah,
+    int ayah,
+  ) async {
+    if (_assetService.requiresAsset(source)) {
+      final map = await _assetService.load(source);
+      return _sanitizeTranslation(map['$surah:$ayah'] ?? '');
     }
-    final jsonString = await rootBundle.loadString(path);
-    final data = jsonDecode(jsonString) as Map<String, dynamic>;
-    final map = <String, String>{};
-    data.forEach((key, value) {
-      map[key] = value?.toString() ?? '';
-    });
-    _cache[source] = map;
-    _inFlight.remove(source);
-    return map;
+    final verseKey = '$surah:$ayah';
+    return _sanitizeTranslation(
+      AlQuran.translation(_translationType(source), verseKey).text,
+    );
   }
 
-  String? _assetPath(TranslationSource source) {
+  TranslationType _translationType(TranslationSource source) {
     switch (source) {
-      case TranslationSource.idKingFahad:
-        return 'assets/translations/translation_134.json';
-      case TranslationSource.idSabiq:
-        return 'assets/translations/translation_141.json';
       case TranslationSource.idKemenag:
+      case TranslationSource.idKingFahad:
+      case TranslationSource.idSabiq:
+        return TranslationType.idIndonesianIslamicAffairsMinistry;
       case TranslationSource.enAbdelHaleem:
       case TranslationSource.enSaheeh:
-        return null;
+        return TranslationType.enMASAbdelHaleem;
     }
+  }
+
+  String _sanitizeTranslation(String input) {
+    return input.replaceAll(RegExp(r'<[^>]*>'), '').trim();
   }
 }

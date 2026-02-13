@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:quran/quran.dart' as quran;
+import 'package:quran_app/core/di/injection.dart';
 import 'package:quran_app/core/services/audio_cache_service.dart';
 import 'package:quran_app/core/settings/audio_settings.dart';
 import 'quran_audio_state.dart';
@@ -11,9 +12,10 @@ import 'quran_audio_state.dart';
 @injectable
 class QuranAudioCubit extends Cubit<QuranAudioState> {
   final AudioCacheService _audioCacheService;
-  final AudioSettingsController _audioSettings = AudioSettingsController.instance;
+  final AudioSettingsController _audioSettings =
+      getIt<AudioSettingsController>();
   final AudioPlayer _player = AudioPlayer();
-  
+
   // Stream subscriptions for proper cleanup
   StreamSubscription<PlayerState>? _playerStateSubscription;
   StreamSubscription<Duration>? _positionSubscription;
