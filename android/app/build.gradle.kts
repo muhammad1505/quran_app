@@ -23,14 +23,25 @@ android {
     // Release signing configuration
     val keystorePropertiesFile = rootProject.file("key.properties")
     val signingRelease = if (keystorePropertiesFile.exists()) {
-        val props = java.util.Properties().apply { load(keystorePropertiesFile.inputStream()) }
-        signingConfigs.create("release") {
-            storeFile = file(props["storeFile"] as String)
-            storePassword = props["storePassword"] as String
-            keyAlias = props["keyAlias"] as String
-            keyPassword = props["storePassword"] as String
+        println("Found key.properties at: ${keystorePropertiesFile.absolutePath}")
+        try {
+            val props = java.util.Properties().apply { load(keystorePropertiesFile.inputStream()) }
+            println("Loaded properties: storeFile=${props["storeFile"]}, keyAlias=${props["keyAlias"]}")
+            signingConfigs.create("release") {
+                storeFile = file(props["storeFile"] as String)
+                storePassword = props["storePassword"] as String
+                keyAlias = props["keyAlias"] as String
+                keyPassword = props["storePassword"] as String
+            }
+        } catch (e: Exception) {
+            println("❌ Error loading release signing config: ${e.message}")
+            e.printStackTrace()
+            null
         }
-    } else null
+    } else {
+        println("⚠️ key.properties not found, skipping release signing configuration")
+        null
+    }
 
     defaultConfig {
         applicationId = "com.example.quran_app"
