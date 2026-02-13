@@ -74,15 +74,16 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i814.BookmarkCubit(gh<_i467.BookmarkService>()));
     gh.lazySingleton<_i298.TranslationService>(
         () => _i298.TranslationService(gh<_i235.TranslationAssetService>()));
-    gh.factory<_i257.SearchCubit>(() => _i257.SearchCubit(
-          gh<_i942.QuranSettingsController>(),
-          gh<_i235.TranslationAssetService>(),
-        ));
     gh.factory<_i816.HomeCubit>(() => _i816.HomeCubit(
           gh<_i757.LastReadService>(),
           gh<_i467.BookmarkService>(),
           gh<_i942.QuranSettingsController>(),
           gh<_i298.TranslationService>(),
+        ));
+    gh.factory<_i257.SearchCubit>(() => _i257.SearchCubit(
+          gh<_i942.QuranSettingsController>(),
+          gh<_i235.TranslationAssetService>(),
+          gh<_i467.BookmarkService>(),
         ));
     return this;
   }

@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
+import 'package:quran_app/core/services/bookmark_service.dart';
 import 'package:quran_app/core/services/translation_asset_service.dart';
 import 'package:quran_app/core/settings/quran_settings.dart';
 import 'package:alfurqan/alfurqan.dart';
 import 'package:alfurqan/constant.dart';
+import 'package:quran_app/features/quran/presentation/bloc/search/search_constants.dart';
 
 part 'search_state.dart';
 
@@ -14,40 +16,71 @@ part 'search_state.dart';
 class SearchCubit extends Cubit<SearchState> {
   final QuranSettingsController _quranSettings;
   final TranslationAssetService _translationAssetService;
+  final BookmarkService _bookmarkService;
   Timer? _searchDebounce;
   Map<String, String>? _translationSearchMap;
   TranslationSource? _translationSearchSource;
 
-  SearchCubit(this._quranSettings, this._translationAssetService)
-      : super(SearchInitial(List<int>.generate(114, (i) => i + 1)));
+  SearchCubit(
+    this._quranSettings,
+    this._translationAssetService,
+    this._bookmarkService,
+  ) : super(const SearchInitial(
+          surahNumbers,
+          juzNumbers,
+          [],
+          [],
+        )) {
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    final bookmarks = await _bookmarkService.getAll();
+    final folders = await _bookmarkService.getFolders();
+    emit(SearchInitial(
+      surahNumbers,
+      juzNumbers,
+      bookmarks,
+      folders,
+    ));
+  }
 
   void search(String query) {
     _searchDebounce?.cancel();
-    final normalized = query.trim();
+    final normalized = query.trim().toLowerCase();
 
     if (normalized.isEmpty) {
-      emit(SearchInitial(List<int>.generate(114, (i) => i + 1)));
+      _loadInitialData();
       return;
     }
 
-    if (normalized.length < 3) {
-      _filterSurahNames(normalized);
-      return;
-    }
-
-    emit(SearchLoading());
+    emit(const SearchLoading());
     _searchDebounce = Timer(const Duration(milliseconds: 350), () async {
+      // Surah Search
       final nameMatches = _getSurahNameMatches(normalized);
       final translationMatches = await _searchTranslations(normalized);
-      final combined = {...nameMatches, ...translationMatches}.toList();
-      combined.sort();
-      emit(SearchLoaded(combined));
-    });
-  }
+      final combinedSurahs = {...nameMatches, ...translationMatches}.toList();
+      combinedSurahs.sort();
 
-  void _filterSurahNames(String normalized) {
-    final nameMatches = _getSurahNameMatches(normalized);
-    emit(SearchLoaded(nameMatches.toList()));
+      // Juz Search
+      final juzMatches = List<int>.generate(30, (i) => i + 1).where((juz) {
+        return 'juz $juz'.contains(normalized) || juz.toString() == normalized;
+      }).toList();
+
+      // Bookmark Search
+      final allBookmarks = await _bookmarkService.getAll();
+      final allFolders = await _bookmarkService.getFolders();
+
+      final bookmarkMatches = allBookmarks.where((bookmark) {
+        return bookmark.note?.toLowerCase().contains(normalized) ?? false;
+      }).toList();
+
+      final folderMatches = allFolders.where((folder) {
+        return folder.name.toLowerCase().contains(normalized);
+      }).toList();
+
+      emit(SearchLoaded(combinedSurahs, juzMatches, bookmarkMatches, folderMatches));
+    });
   }
 
   Set<int> _getSurahNameMatches(String normalized) {

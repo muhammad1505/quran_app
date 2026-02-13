@@ -343,12 +343,12 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
           const Divider(),
-          _buildSectionHeader("Tentang"),
           ListTile(
-            title: const Text("Versi Aplikasi"),
+            title: const Text('Versi Aplikasi'),
             subtitle: Text(_appVersion),
             leading: const Icon(Icons.info_outline),
           ),
+          
         ],
       ),
     );

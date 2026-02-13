@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:quran_app/features/more/presentation/pages/articles_page.dart';
 import 'package:quran_app/features/more/presentation/pages/help_feedback_page.dart';
@@ -6,8 +7,30 @@ import 'package:quran_app/features/more/presentation/pages/tafsir_hub_page.dart'
 import 'package:quran_app/features/offline/presentation/pages/offline_manager_page.dart';
 import 'package:quran_app/features/settings/presentation/pages/settings_page.dart';
 
-class MorePage extends StatelessWidget {
+class MorePage extends StatefulWidget {
   const MorePage({super.key});
+
+  @override
+  State<MorePage> createState() => _MorePageState();
+}
+
+class _MorePageState extends State<MorePage> {
+  String _appVersion = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersionInfo();
+  }
+
+  Future<void> _loadVersionInfo() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _appVersion = 'v${packageInfo.version}+${packageInfo.buildNumber}';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +110,7 @@ class MorePage extends StatelessWidget {
               showAboutDialog(
                 context: context,
                 applicationName: 'Al-Quran Terjemahan',
-                applicationVersion: 'v1.0.0',
+                applicationVersion: _appVersion,
                 applicationLegalese: '© 2026 Quran App',
               );
             },
@@ -115,5 +138,4 @@ class MorePage extends StatelessWidget {
       ),
     );
   }
-
 }
